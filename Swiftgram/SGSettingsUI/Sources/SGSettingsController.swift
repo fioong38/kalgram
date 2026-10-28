@@ -50,6 +50,7 @@ private enum SGControllerSection: Int32, SGItemListSection {
 
 private enum SGBoolSetting: String {
     case bypassProtection
+    case keepSelfDestructing
     case ghostQuickEnabled
     case ghostQuickReadReceipts
     case ghostQuickTyping
@@ -174,6 +175,8 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.header(id: id.count, section: .kalgramProtection, text: "ЗАЩИЩЁННЫЙ КОНТЕНТ", badge: nil))
     entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .bypassProtection, value: KalgramTweaks.bypassProtection, text: "Обходить запреты", enabled: true))
     entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Копирование, сохранение и скриншоты там, где отправитель запретил. Скриншоты не отправляют уведомление собеседнику. Нужен перезапуск."))
+    entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
+    entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Одноразовые и таймерные фото и видео не исчезают после просмотра, и отправитель не видит, что ты открыл. Чтобы отметить просмотренным — долгий тап по сообщению → «🔥 Сжечь»."))
 
     entries.append(.header(id: id.count, section: .kalgramGhostQuick, text: "👻 БЫСТРЫЙ ПРИЗРАК", badge: nil))
     entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickEnabled, value: KalgramGhost.isQuickEnabled, text: "Включён", enabled: true))
@@ -405,6 +408,8 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
           }
         },*/ setBoolValue: { setting, value in
         switch setting {
+        case .keepSelfDestructing:
+            KalgramTweaks.keepSelfDestructing = value
         case .bypassProtection:
             KalgramTweaks.bypassProtection = value
             askForRestart?()

@@ -1352,6 +1352,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        // kalgram: a kept self-destructing message can be burned, which tells the sender it was viewed
+        if KalgramTweaks.keepSelfDestructing && message.flags.contains(.Incoming) && message.containsSecretMedia && !isExpired {
+            actions.append(.action(ContextMenuActionItem(text: "🔥 Сжечь (отметить просмотренным)", textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.actionSheet.destructiveActionTextColor)
+            }, action: { _, f in
+                let _ = context.engine.messages.kalgramBurnMessageContent(messageId: message.id).startStandalone()
+                f(.default)
+            })))
+        }
+
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
         if !messageText.isEmpty || richMessageMarkdown != nil || (resourceAvailable && isImage) || diceEmoji != nil {
             if !isExpired {

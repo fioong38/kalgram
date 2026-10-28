@@ -17,4 +17,17 @@ public enum KalgramTweaks {
             UserDefaults.standard.set(newValue, forKey: bypassProtectionKey)
         }
     }
+
+    // Opening a self-destructing (view-once or timed) photo or video does not
+    // start its timer or notify the sender until the user burns it. On by default.
+    public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
+
+    public static var keepSelfDestructing: Bool {
+        get {
+            return UserDefaults.standard.object(forKey: keepSelfDestructingKey) as? Bool ?? true
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: keepSelfDestructingKey)
+        }
+    }
 }

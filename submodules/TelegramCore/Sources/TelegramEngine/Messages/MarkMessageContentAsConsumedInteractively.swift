@@ -3,9 +3,14 @@ import Postbox
 internal import TelegramApi
 import SwiftSignalKit
 
-func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
+func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId, kalgramBurn: Bool = false) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if let message = transaction.getMessage(messageId), message.flags.contains(.Incoming) {
+            // kalgram: opening a self-destructing photo or video neither starts its timer nor
+            // tells the sender. It stays until the user burns it.
+            if KalgramTweaks.keepSelfDestructing && !kalgramBurn && message.containsSecretMedia {
+                return
+            }
             var updateMessage = false
             var updatedAttributes = message.attributes
             

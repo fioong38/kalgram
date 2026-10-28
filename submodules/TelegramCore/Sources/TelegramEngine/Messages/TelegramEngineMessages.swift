@@ -292,6 +292,11 @@ public extension TelegramEngine {
             return _internal_getMessagesLoadIfNecessary(messageIds, postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, strategy: strategy)
         }
 
+        // kalgram: marks a kept self-destructing message as viewed, which starts its usual timer
+        public func kalgramBurnMessageContent(messageId: MessageId) -> Signal<Void, NoError> {
+            return _internal_markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: messageId, kalgramBurn: true)
+        }
+
         public func markMessageContentAsConsumedInteractively(messageId: MessageId) -> Signal<Void, NoError> {
             return _internal_markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: messageId)
         }
