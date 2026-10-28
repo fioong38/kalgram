@@ -1,0 +1,144 @@
+name: kalgram build
+
+# Builds an unsigned kalgram .ipa for sideloading (ESign etc).
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   KALGRAM_API_ID, KALGRAM_API_HASH — from my.telegram.org
+#   KALGRAM_IPA_PASSWORD             — the artifact is encrypted with it
+#
+# The api_id/api_hash end up inside the binary, and artifacts of a public
+# repository can be downloaded by anyone, so the .ipa is only ever uploaded
+# encrypted. Decrypt it locally with tools/decrypt-ipa.sh.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: kalgram-build
+  cancel-in-progress: false
+
+env:
+  KALGRAM_BUNDLE_ID: org.kalgram.app
+  SOURCE_DIR: /Users/Shared/telegram-ios
+  BAZEL_USER_ROOT: /private/var/tmp/_bazel_containerhost
+  BAZEL_CACHE_DIR: /Users/Shared/telegram-bazel-cache
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 340
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Check secrets
+        env:
+          API_ID: ${{ secrets.KALGRAM_API_ID }}
+          API_HASH: ${{ secrets.KALGRAM_API_HASH }}
+          IPA_PASSWORD: ${{ secrets.KALGRAM_IPA_PASSWORD }}
+        run: |
+          missing=0
+          [ -n "$API_ID" ] || { echo "::error::KALGRAM_API_ID secret is not set"; missing=1; }
+          [ -n "$API_HASH" ] || { echo "::error::KALGRAM_API_HASH secret is not set"; missing=1; }
+          [ -n "$IPA_PASSWORD" ] || { echo "::error::KALGRAM_IPA_PASSWORD secret is not set"; missing=1; }
+          exit $missing
+
+      - name: Select Xcode
+        run: |
+          XCODE_VERSION=$(python3 -c 'import json;print(json.load(open("versions.json"))["xcode"])')
+          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+          xcodebuild -version
+          df -h /
+
+      # Source paths end up in the binary, so build from a fixed location.
+      - name: Create canonical source directory
+        run: |
+          sudo mkdir -p /Users/Shared
+          sudo chown "$(whoami)" /Users/Shared
+          cp -R "$GITHUB_WORKSPACE" "$SOURCE_DIR"
+
+      - name: Restore bazel cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.BAZEL_CACHE_DIR }}
+          key: bazel-${{ runner.os }}-${{ github.sha }}
+          restore-keys: bazel-${{ runner.os }}-
+
+      - name: Write configuration
+        env:
+          API_ID: ${{ secrets.KALGRAM_API_ID }}
+          API_HASH: ${{ secrets.KALGRAM_API_HASH }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kalgram"
+          python3 - <<'EOF'
+          import json, os
+          config = {
+              "bundle_id": os.environ["KALGRAM_BUNDLE_ID"],
+              "api_id": os.environ["API_ID"],
+              "api_hash": os.environ["API_HASH"],
+              "team_id": "C67CF9S4VU",
+              "app_center_id": "0",
+              "is_internal_build": "false",
+              "is_appstore_build": "false",
+              "appstore_id": "0",
+              "app_specific_url_scheme": "kalgram",
+              "premium_iap_product_id": "",
+              "enable_siri": False,
+              "enable_icloud": False,
+              "sg_config": "",
+          }
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "kalgram", "configuration.json"), "w") as f:
+              json.dump(config, f)
+          EOF
+          python3 build-system/kalgram/make_profiles.py \
+            --source build-system/fake-codesigning \
+            --destination "$RUNNER_TEMP/kalgram/codesigning" \
+            --bundleId "$KALGRAM_BUNDLE_ID"
+
+      - name: Build
+        run: |
+          cd "$SOURCE_DIR"
+          BUILD_NUMBER=$(( $(git rev-list --count HEAD) + $(cat build_number_offset) ))
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          python3 -u build-system/Make/Make.py \
+            --bazelUserRoot="$BAZEL_USER_ROOT" \
+            --cacheDir="$BAZEL_CACHE_DIR" \
+            build \
+            --configurationPath="$RUNNER_TEMP/kalgram/configuration.json" \
+            --codesigningInformationPath="$RUNNER_TEMP/kalgram/codesigning" \
+            --configuration=release_arm64 \
+            --buildNumber="$BUILD_NUMBER"
+
+      - name: Encrypt ipa
+        env:
+          IPA_PASSWORD: ${{ secrets.KALGRAM_IPA_PASSWORD }}
+        run: |
+          cd "$SOURCE_DIR"
+          IPA=$(ls bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa | head -1)
+          OPENSSL=/opt/homebrew/opt/openssl@3/bin/openssl
+          [ -x "$OPENSSL" ] || OPENSSL=openssl
+          mkdir -p "$RUNNER_TEMP/out"
+          "$OPENSSL" enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -pass env:IPA_PASSWORD \
+            -in "$IPA" -out "$RUNNER_TEMP/out/kalgram-$BUILD_NUMBER.ipa.enc"
+          ls -la "$RUNNER_TEMP/out"
+
+      - name: Upload encrypted ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: kalgram-${{ env.BUILD_NUMBER }}
+          path: ${{ runner.temp }}/out/*.ipa.enc
+          retention-days: 14
+          compression-level: 0
+
+      - name: Save bazel cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.BAZEL_CACHE_DIR }}
+          key: bazel-${{ runner.os }}-${{ github.sha }}
