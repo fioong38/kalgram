@@ -297,6 +297,11 @@ NSObject * _Nullable makeColorMatrixFilter() {
 static const void *layerDisableScreenshotsKey = &layerDisableScreenshotsKey;
 
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {
+    // kalgram: protected content stays visible on screenshots (KalgramTweaks.bypassProtection, on by default)
+    NSNumber *bypassProtection = [[NSUserDefaults standardUserDefaults] objectForKey:@"kalgram.bypassProtection"];
+    if (bypassProtection == nil || [bypassProtection boolValue]) {
+        disableScreenshots = false;
+    }
     static UITextField *textField = nil;
     static UIView *secureView = nil;
     static dispatch_once_t onceToken;

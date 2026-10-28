@@ -27,6 +27,7 @@ import UndoUI
 private enum SGControllerSection: Int32, SGItemListSection {
     case search
     case kalgram
+    case kalgramProtection
     case kalgramGhostQuick
     case kalgramGhostPermanent
     case trending
@@ -48,6 +49,7 @@ private enum SGControllerSection: Int32, SGItemListSection {
 }
 
 private enum SGBoolSetting: String {
+    case bypassProtection
     case ghostQuickEnabled
     case ghostQuickReadReceipts
     case ghostQuickTyping
@@ -168,6 +170,10 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.header(id: id.count, section: .kalgram, text: "УВЕДОМЛЕНИЯ NTFY", badge: nil))
     entries.append(.disclosure(id: id.count, section: .kalgram, link: .ntfyCopyTopic, text: "Скопировать топик: \(KalgramNtfy.topic)"))
     entries.append(.notice(id: id.count, section: .kalgram, text: "Установи ntfy из App Store, нажми + и вставь этот топик (сервер ntfy.sh).\nСтатус: \(KalgramNtfy.lastStatus ?? "ещё не регистрировался, перезапусти приложение")"))
+    
+    entries.append(.header(id: id.count, section: .kalgramProtection, text: "ЗАЩИЩЁННЫЙ КОНТЕНТ", badge: nil))
+    entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .bypassProtection, value: KalgramTweaks.bypassProtection, text: "Обходить запреты", enabled: true))
+    entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Копирование, сохранение и скриншоты там, где отправитель запретил. Скриншоты не отправляют уведомление собеседнику. Нужен перезапуск."))
 
     entries.append(.header(id: id.count, section: .kalgramGhostQuick, text: "👻 БЫСТРЫЙ ПРИЗРАК", badge: nil))
     entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickEnabled, value: KalgramGhost.isQuickEnabled, text: "Включён", enabled: true))
@@ -399,6 +405,9 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
           }
         },*/ setBoolValue: { setting, value in
         switch setting {
+        case .bypassProtection:
+            KalgramTweaks.bypassProtection = value
+            askForRestart?()
         case .ghostQuickEnabled:
             KalgramGhost.isQuickEnabled = value
         case .ghostQuickReadReceipts:

@@ -260,6 +260,9 @@ public extension Peer {
     }
     
     var isCopyProtectionEnabled: Bool {
+        if KalgramTweaks.bypassProtection {
+            return false
+        }
         switch self {
         case let group as TelegramGroup:
             return group.flags.contains(.copyProtectionEnabled)

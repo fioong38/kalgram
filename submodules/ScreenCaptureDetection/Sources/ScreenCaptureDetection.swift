@@ -34,9 +34,9 @@ private final class ScreenRecordingObserver: NSObject {
 private func screenRecordingActive() -> Signal<Bool, NoError> {
     return Signal { subscriber in
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-            subscriber.putNext(UIScreen.main.isCaptured)
+            subscriber.putNext(UIScreen.main.isCaptured && !kalgramBypassProtection)
             let observer = ScreenRecordingObserver({ value in
-                subscriber.putNext(value)
+                subscriber.putNext(value && !kalgramBypassProtection)
             })
             return ActionDisposable {
                 Queue.mainQueue().async {
@@ -57,6 +57,12 @@ private func screenRecordingActive() -> Signal<Bool, NoError> {
 // legitimate observers (a chat and a gallery over it) discard the same screenshot.
 private let screenshotRepeatInterval: CFAbsoluteTime = 0.5
 
+// kalgram: with protection bypassed (KalgramTweaks.bypassProtection, on by default) screenshots and
+// screen recording are not detected, so nothing is reported to the other side and nothing is hidden
+private var kalgramBypassProtection: Bool {
+    return UserDefaults.standard.object(forKey: "kalgram.bypassProtection") as? Bool ?? true
+}
+
 private final class ScreenshotNotificationObserver {
     private var observer: NSObjectProtocol?
     private var lastTimestamp: CFAbsoluteTime?
@@ -64,6 +70,9 @@ private final class ScreenshotNotificationObserver {
     init(_ f: @escaping () -> Void) {
         self.observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { [weak self] _ in
             guard let self else {
+                return
+            }
+            if kalgramBypassProtection {
                 return
             }
             let timestamp = CFAbsoluteTimeGetCurrent()
