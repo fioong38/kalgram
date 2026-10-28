@@ -17,6 +17,8 @@ private final class AccountPresenceManagerImpl {
     private var onlineTimer: SignalKitTimer?
     
     private var wasOnline: Bool = false
+    private var appliedGhost: Bool = false
+    private var ghostObserver: NSObjectProtocol?
     
     init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
         self.queue = queue
@@ -33,18 +35,36 @@ private final class AccountPresenceManagerImpl {
                 self.updatePresence(value)
             }
         })
+
+        // kalgram: re-apply the presence when ghost mode is toggled
+        self.ghostObserver = NotificationCenter.default.addObserver(forName: KalgramGhost.didChangeNotification, object: nil, queue: nil, using: { [weak self] _ in
+            queue.async {
+                guard let self else {
+                    return
+                }
+                let isGhost = KalgramGhost.isActive(.online)
+                if self.appliedGhost != isGhost {
+                    self.updatePresence(self.wasOnline)
+                }
+            }
+        })
     }
-    
+
     deinit {
         assert(self.queue.isCurrent())
+        if let ghostObserver = self.ghostObserver {
+            NotificationCenter.default.removeObserver(ghostObserver)
+        }
         self.shouldKeepOnlinePresenceDisposable?.dispose()
         self.currentRequestDisposable.dispose()
         self.onlineTimer?.invalidate()
     }
     
     private func updatePresence(_ isOnline: Bool) {
+        let isGhost = KalgramGhost.isActive(.online)
+        self.appliedGhost = isGhost
         let request: Signal<Api.Bool, MTRpcError>
-        if isOnline {
+        if isOnline && !isGhost {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return

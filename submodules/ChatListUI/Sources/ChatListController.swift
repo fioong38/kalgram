@@ -6927,11 +6927,56 @@ private func chatListHeaderOverflowInfo(strings: PresentationStrings) -> [AnyHas
     ]
 }
 
+// kalgram: set by TelegramUI, which can depend on the Swiftgram settings screen
+public var kalgramMakeGhostSettingsController: ((AccountContext) -> ViewController)?
+
+private func kalgramGhostIcon(enabled: Bool) -> UIImage? {
+    let size = CGSize(width: 26.0, height: 26.0)
+    return generateImage(size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        UIGraphicsPushContext(context)
+        let font = UIFont.systemFont(ofSize: 20.0)
+        let string = NSAttributedString(string: "👻", attributes: [.font: font])
+        let bounds = string.boundingRect(with: size, options: .usesLineFragmentOrigin, context: nil)
+        context.setAlpha(enabled ? 1.0 : 0.35)
+        string.draw(at: CGPoint(x: floor((size.width - bounds.width) / 2.0), y: floor((size.height - bounds.height) / 2.0)))
+        UIGraphicsPopContext()
+    })
+}
+
 private final class ChatListLocationContext {
     let context: AccountContext
     let location: ChatListControllerLocation
     weak var parentController: ChatListControllerImpl?
-    
+
+    // kalgram: the ghost button toggles the quick ghost mode, a long press opens its settings
+    func makeKalgramGhostButton() -> NavigationBarComponent.Button {
+        let isEnabled = KalgramGhost.isQuickEnabled
+        return NavigationBarComponent.Button(id: isEnabled ? "kalgramGhostOn" : "kalgramGhostOff",
+            content: kalgramGhostIcon(enabled: isEnabled).flatMap { .image($0) } ?? .text(title: "👻", isBold: false),
+            action: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                let enabled = !KalgramGhost.isQuickEnabled
+                KalgramGhost.isQuickEnabled = enabled
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                self.ghostButton = self.makeKalgramGhostButton()
+                self.parentController?.requestLayout(transition: .immediate)
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: enabled ? "👻 Призрак включён" : "Призрак выключен", timeout: 1.5, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+            },
+            contextAction: { [weak self] _, gesture in
+                guard let self, let makeController = kalgramMakeGhostSettingsController else {
+                    gesture?.cancel()
+                    return
+                }
+                gesture?.cancel()
+                self.parentController?.push(makeController(self.context))
+            }
+        )
+    }
+
     private var proxyUnavailableTooltipController: TooltipController?
     private var didShowProxyUnavailableTooltipController = false
     
@@ -6946,9 +6991,13 @@ private final class ChatListLocationContext {
     var settingsButton: NavigationBarComponent.Button? // MARK: Swiftgram
     var proxyButton: NavigationBarComponent.Button?
     var storyButton: NavigationBarComponent.Button?
-    
+    var ghostButton: NavigationBarComponent.Button? // kalgram
+
     var rightButtons: [NavigationBarComponent.Button] {
         var result: [NavigationBarComponent.Button] = []
+        if let ghostButton = self.ghostButton {
+            result.append(ghostButton)
+        }
         // MARK: Swiftgram
         if let settingsButton = self.settingsButton {
             result.append(settingsButton)
@@ -7486,8 +7535,11 @@ private final class ChatListLocationContext {
                     self.settingsButton = nil
                 }
                 //
-                
+
+                self.ghostButton = self.makeKalgramGhostButton()
+
             } else {
+                self.ghostButton = nil
                 let parentController = self.parentController
                 self.rightButton = NavigationBarComponent.Button(id: "more",
                     content: .more,

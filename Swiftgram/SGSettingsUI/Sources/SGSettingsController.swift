@@ -27,6 +27,8 @@ import UndoUI
 private enum SGControllerSection: Int32, SGItemListSection {
     case search
     case kalgram
+    case kalgramGhostQuick
+    case kalgramGhostPermanent
     case trending
     case content
     case tabs
@@ -46,6 +48,15 @@ private enum SGControllerSection: Int32, SGItemListSection {
 }
 
 private enum SGBoolSetting: String {
+    case ghostQuickEnabled
+    case ghostQuickReadReceipts
+    case ghostQuickTyping
+    case ghostQuickOnline
+    case ghostQuickStories
+    case ghostPermanentReadReceipts
+    case ghostPermanentTyping
+    case ghostPermanentOnline
+    case ghostPermanentStories
     case hidePhoneInSettings
     case showTabNames
     case showContactsTab
@@ -157,6 +168,21 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.header(id: id.count, section: .kalgram, text: "УВЕДОМЛЕНИЯ NTFY", badge: nil))
     entries.append(.disclosure(id: id.count, section: .kalgram, link: .ntfyCopyTopic, text: "Скопировать топик: \(KalgramNtfy.topic)"))
     entries.append(.notice(id: id.count, section: .kalgram, text: "Установи ntfy из App Store, нажми + и вставь этот топик (сервер ntfy.sh).\nСтатус: \(KalgramNtfy.lastStatus ?? "ещё не регистрировался, перезапусти приложение")"))
+
+    entries.append(.header(id: id.count, section: .kalgramGhostQuick, text: "👻 БЫСТРЫЙ ПРИЗРАК", badge: nil))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickEnabled, value: KalgramGhost.isQuickEnabled, text: "Включён", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickReadReceipts, value: KalgramGhost.isInQuickSet(.readReceipts), text: "Не отправлять «прочитано»", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickTyping, value: KalgramGhost.isInQuickSet(.typing), text: "Скрывать «печатает»", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickOnline, value: KalgramGhost.isInQuickSet(.online), text: "Не показывать онлайн", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickStories, value: KalgramGhost.isInQuickSet(.stories), text: "Невидимый просмотр историй", enabled: true))
+    entries.append(.notice(id: id.count, section: .kalgramGhostQuick, text: "Что включает кнопка-призрак на экране чатов. Тап по ней — вкл/выкл, долгий тап — сюда."))
+
+    entries.append(.header(id: id.count, section: .kalgramGhostPermanent, text: "🔒 ПОСТОЯННЫЙ ПРИЗРАК", badge: nil))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentReadReceipts, value: KalgramGhost.isPermanent(.readReceipts), text: "Не отправлять «прочитано»", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentTyping, value: KalgramGhost.isPermanent(.typing), text: "Скрывать «печатает»", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentOnline, value: KalgramGhost.isPermanent(.online), text: "Не показывать онлайн", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentStories, value: KalgramGhost.isPermanent(.stories), text: "Невидимый просмотр историй", enabled: true))
+    entries.append(.notice(id: id.count, section: .kalgramGhostPermanent, text: "Работает всегда, кнопка на это не влияет."))
     
     
     if SGSimpleSettings.shared.canUseNY {
@@ -373,6 +399,24 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
           }
         },*/ setBoolValue: { setting, value in
         switch setting {
+        case .ghostQuickEnabled:
+            KalgramGhost.isQuickEnabled = value
+        case .ghostQuickReadReceipts:
+            KalgramGhost.setInQuickSet(.readReceipts, value)
+        case .ghostQuickTyping:
+            KalgramGhost.setInQuickSet(.typing, value)
+        case .ghostQuickOnline:
+            KalgramGhost.setInQuickSet(.online, value)
+        case .ghostQuickStories:
+            KalgramGhost.setInQuickSet(.stories, value)
+        case .ghostPermanentReadReceipts:
+            KalgramGhost.setPermanent(.readReceipts, value)
+        case .ghostPermanentTyping:
+            KalgramGhost.setPermanent(.typing, value)
+        case .ghostPermanentOnline:
+            KalgramGhost.setPermanent(.online, value)
+        case .ghostPermanentStories:
+            KalgramGhost.setPermanent(.stories, value)
         case .hidePhoneInSettings:
             SGSimpleSettings.shared.hidePhoneInSettings = value
             askForRestart?()

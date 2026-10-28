@@ -3,6 +3,7 @@ import SGIAP
 import SGPayWall
 import SGProUI
 import SGSimpleSettings
+import SGSettingsUI
 //
 import Foundation
 import UIKit
@@ -1108,6 +1109,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(uploadInBackground: appDelegate?.uploadInBackround), encryptionParameters: encryptionParameters).start()
         
         self.updateNotificationTokensRegistration()
+        
+        // kalgram: long press on the chat list ghost button opens the ghost settings
+        kalgramMakeGhostSettingsController = { context in
+            return sgSettingsController(context: context)
+        }
         
         if applicationBindings.isMainApp {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, inForeground: self.applicationBindings.applicationInForeground, activeAccounts: self.activeAccountContexts
