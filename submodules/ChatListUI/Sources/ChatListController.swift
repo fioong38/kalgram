@@ -6952,8 +6952,14 @@ private final class ChatListLocationContext {
     // kalgram: the ghost button toggles the quick ghost mode, a long press opens its settings
     func makeKalgramGhostButton() -> NavigationBarComponent.Button {
         let isEnabled = KalgramGhost.isQuickEnabled
+        let content: NavigationBarComponent.Button.Content
+        if let icon = kalgramGhostIcon(enabled: isEnabled) {
+            content = .image(icon)
+        } else {
+            content = .text(title: "👻", isBold: false)
+        }
         return NavigationBarComponent.Button(id: isEnabled ? "kalgramGhostOn" : "kalgramGhostOff",
-            content: kalgramGhostIcon(enabled: isEnabled).flatMap { .image($0) } ?? .text(title: "👻", isBold: false),
+            content: content,
             action: { [weak self] _ in
                 guard let self else {
                     return
