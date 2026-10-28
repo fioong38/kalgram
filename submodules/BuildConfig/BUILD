@@ -42,5 +42,7 @@ objc_library(
     ],
     deps = [
     ],
+    # KGAppGroupFallback is only reached through +load, keep it linked
+    alwayslink = True,
     visibility = ["//visibility:public"],
 )
