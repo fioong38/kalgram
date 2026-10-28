@@ -39,7 +39,7 @@ public extension RestrictedContentMessageAttribute {
             if rule.reason == "sensitive" {
                 continue
             }
-            if rule.platform == "all" || rule.platform == "ios" || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
+            if KalgramTweaks.restrictionApplies(rulePlatform: rule.platform, platform: "ios", addedPlatforms: contentSettings.addContentRestrictionReasons) {
                 if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                     return rule.text + "\n" + "\(rule.reason)-\(rule.platform)"
                 }

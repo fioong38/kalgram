@@ -43,7 +43,7 @@ public extension Peer {
                 if rule.reason == "sensitive" {
                     continue
                 }
-                if rule.platform == "all" || rule.platform == platform || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
+                if KalgramTweaks.restrictionApplies(rulePlatform: rule.platform, platform: platform, addedPlatforms: contentSettings.addContentRestrictionReasons) {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                         return rule.text + "\n" + "\(rule.reason)-\(rule.platform)"
                     }

@@ -53,6 +53,7 @@ private enum SGControllerSection: Int32, SGItemListSection {
 private enum SGBoolSetting: String {
     case bypassProtection
     case keepSelfDestructing
+    case bypassIosRestrictions
     case keepDeletedMessages
     case keepEditHistory
     case islandEnabled
@@ -183,6 +184,8 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Копирование, сохранение и скриншоты там, где отправитель запретил. Скриншоты не отправляют уведомление собеседнику. Нужен перезапуск."))
     entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
     entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Одноразовые и таймерные фото и видео не исчезают после просмотра, и отправитель не видит, что ты открыл. Чтобы отметить просмотренным — долгий тап по сообщению → «🔥 Сжечь»."))
+    entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .bypassIosRestrictions, value: KalgramTweaks.bypassIosRestrictions, text: "Открывать каналы, скрытые на iOS", enabled: true))
+    entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Каналы и боты с пометкой «нарушает правила App Store» открываются, как на Android и ПК. Блокировки по закону остаются. Нужен перезапуск."))
     
     entries.append(.header(id: id.count, section: .kalgramHistory, text: "ЛИЧНЫЕ ЧАТЫ", badge: nil))
     entries.append(.toggle(id: id.count, section: .kalgramHistory, settingName: .keepDeletedMessages, value: KalgramTweaks.keepDeletedMessages, text: "Сохранять удалённые", enabled: true))
@@ -427,6 +430,9 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             KalgramTweaks.keepDeletedMessages = value
         case .keepEditHistory:
             KalgramTweaks.keepEditHistory = value
+        case .bypassIosRestrictions:
+            KalgramTweaks.bypassIosRestrictions = value
+            askForRestart?()
         case .keepSelfDestructing:
             KalgramTweaks.keepSelfDestructing = value
         case .bypassProtection:
