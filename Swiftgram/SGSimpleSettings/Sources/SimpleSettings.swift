@@ -645,7 +645,8 @@ extension SGSimpleSettings {
 
 extension SGSimpleSettings {
     public var isNYEnabled: Bool {
-        return canUseNY && NYStyle(rawValue: nyStyle) != .default
+        // kalgram: no Swiftgram server to allow it
+        return NYStyle(rawValue: nyStyle) != .default
     }
 }
 
