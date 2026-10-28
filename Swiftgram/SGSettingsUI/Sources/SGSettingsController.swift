@@ -28,6 +28,7 @@ private enum SGControllerSection: Int32, SGItemListSection {
     case search
     case kalgram
     case kalgramProtection
+    case kalgramHistory
     case kalgramGhostQuick
     case kalgramGhostPermanent
     case trending
@@ -51,6 +52,8 @@ private enum SGControllerSection: Int32, SGItemListSection {
 private enum SGBoolSetting: String {
     case bypassProtection
     case keepSelfDestructing
+    case keepDeletedMessages
+    case keepEditHistory
     case ghostQuickEnabled
     case ghostQuickReadReceipts
     case ghostQuickTyping
@@ -177,6 +180,11 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Копирование, сохранение и скриншоты там, где отправитель запретил. Скриншоты не отправляют уведомление собеседнику. Нужен перезапуск."))
     entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
     entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Одноразовые и таймерные фото и видео не исчезают после просмотра, и отправитель не видит, что ты открыл. Чтобы отметить просмотренным — долгий тап по сообщению → «🔥 Сжечь»."))
+    
+    entries.append(.header(id: id.count, section: .kalgramHistory, text: "ЛИЧНЫЕ ЧАТЫ", badge: nil))
+    entries.append(.toggle(id: id.count, section: .kalgramHistory, settingName: .keepDeletedMessages, value: KalgramTweaks.keepDeletedMessages, text: "Сохранять удалённые", enabled: true))
+    entries.append(.toggle(id: id.count, section: .kalgramHistory, settingName: .keepEditHistory, value: KalgramTweaks.keepEditHistory, text: "Сохранять историю правок", enabled: true))
+    entries.append(.notice(id: id.count, section: .kalgramHistory, text: "Только личные чаты. Удалённое собеседником остаётся с пометкой «🗑 Удалено», у изменённого ниже видно «✏️ было: …». Работает для сообщений, пришедших, пока kalgram был запущен или синхронизировался."))
 
     entries.append(.header(id: id.count, section: .kalgramGhostQuick, text: "👻 БЫСТРЫЙ ПРИЗРАК", badge: nil))
     entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickEnabled, value: KalgramGhost.isQuickEnabled, text: "Включён", enabled: true))
@@ -408,6 +416,10 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
           }
         },*/ setBoolValue: { setting, value in
         switch setting {
+        case .keepDeletedMessages:
+            KalgramTweaks.keepDeletedMessages = value
+        case .keepEditHistory:
+            KalgramTweaks.keepEditHistory = value
         case .keepSelfDestructing:
             KalgramTweaks.keepSelfDestructing = value
         case .bypassProtection:

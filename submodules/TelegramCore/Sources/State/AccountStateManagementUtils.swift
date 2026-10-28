@@ -4621,7 +4621,12 @@ func replayFinalState(
                 upsertEphemeralReplacement(transaction: transaction, anchorMessageId: anchorMessageId, message: message)
             case let .DeleteEphemeralMessages(peerId, ids):
                 deleteEphemeralMessages(transaction: transaction, peerId: peerId, ids: ids)
-            case let .DeleteMessagesWithGlobalIds(ids):
+            case var .DeleteMessagesWithGlobalIds(ids):
+                // kalgram: private messages the other side deleted are kept and marked
+                let keptIds = Set(kalgramKeepDeletedMessages(transaction: transaction, accountPeerId: accountPeerId, ids: transaction.messageIdsForGlobalIds(ids)).map { $0.id })
+                if !keptIds.isEmpty {
+                    ids = ids.filter { !keptIds.contains($0) }
+                }
                 var resourceIds: [MediaResourceId] = []
                 transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
@@ -4680,7 +4685,7 @@ func replayFinalState(
                         generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
                     }
                     
-                    return .update(mergedServerMessageUpdate(previous: previousMessage, updated: message))
+                    return .update(kalgramMergeEditHistory(previous: previousMessage, updated: mergedServerMessageUpdate(previous: previousMessage, updated: message), accountPeerId: accountPeerId))
                 })
                 if let generatedEvent = generatedEvent {
                     addedReactionEvents.append(generatedEvent)
