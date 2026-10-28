@@ -119,7 +119,9 @@ jobs:
           IPA_PASSWORD: ${{ secrets.KALGRAM_IPA_PASSWORD }}
         run: |
           cd "$SOURCE_DIR"
-          IPA=$(ls bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa | head -1)
+          # bazel-bin points at the last build's configuration
+          IPA=bazel-bin/Telegram/Telegram.ipa
+          [ -f "$IPA" ] || { echo "::error::$IPA not found"; find -L bazel-out -name Telegram.ipa -maxdepth 6 2>/dev/null; exit 1; }
           OPENSSL=/opt/homebrew/opt/openssl@3/bin/openssl
           [ -x "$OPENSSL" ] || OPENSSL=openssl
           mkdir -p "$RUNNER_TEMP/out"
