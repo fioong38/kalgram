@@ -1706,7 +1706,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return true
         })
         
-        let updatedApsToken = self.apsNotificationToken |> distinctUntilChanged(isEqual: { $0 == $1 })
+        // kalgram: a sideloaded build may never get an APNs token, start without one so ntfy still registers
+        let updatedApsToken = (Signal<Data?, NoError>.single(nil) |> then(self.apsNotificationToken)) |> distinctUntilChanged(isEqual: { $0 == $1 })
         self.registeredNotificationTokensDisposable.set((combineLatest(
             queue: .mainQueue(),
             settings,
@@ -1761,10 +1762,28 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         return account.engine.accountData.unregisterNotificationToken(token: token, type: .voip, otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
                     }
                 } else {
+                    let registeredAps: Signal<Bool, NoError>
                     if let apsNotificationToken {
-                        appliedAps = account.engine.accountData.registerNotificationToken(token: apsNotificationToken, type: .aps(encrypt: true), sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                        registeredAps = account.engine.accountData.registerNotificationToken(token: apsNotificationToken, type: .aps(encrypt: true), sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     } else {
-                        appliedAps = .single(true)
+                        registeredAps = .single(true)
+                    }
+                    // kalgram: also ask for Simple Push to the ntfy topic
+                    let registeredNtfy = account.engine.accountData.registerSimplePushEndpoint(endpoint: KalgramNtfy.endpoint, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                    |> map { error -> Bool in
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "dd.MM HH:mm"
+                        let time = formatter.string(from: Date())
+                        if let error {
+                            KalgramNtfy.lastStatus = "❌ \(time): \(error)"
+                        } else {
+                            KalgramNtfy.lastStatus = "✅ \(time): Telegram принял адрес"
+                        }
+                        return true
+                    }
+                    appliedAps = combineLatest(registeredAps, registeredNtfy)
+                    |> map { aps, _ -> Bool in
+                        return aps
                     }
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })

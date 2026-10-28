@@ -26,6 +26,7 @@ import UndoUI
 
 private enum SGControllerSection: Int32, SGItemListSection {
     case search
+    case kalgram
     case trending
     case content
     case tabs
@@ -126,6 +127,7 @@ private enum SGSliderSetting: String {
 }
 
 private enum SGDisclosureLink: String {
+    case ntfyCopyTopic
     case contentSettings
     case languageSettings
 }
@@ -151,6 +153,10 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     let id = SGItemListCounter()
     
     entries.append(.searchInput(id: id.count, section: .search, title: NSAttributedString(string: "🔍"), text: state.searchQuery ?? "", placeholder: strings.Common_Search))
+
+    entries.append(.header(id: id.count, section: .kalgram, text: "УВЕДОМЛЕНИЯ NTFY", badge: nil))
+    entries.append(.disclosure(id: id.count, section: .kalgram, link: .ntfyCopyTopic, text: "Скопировать топик: \(KalgramNtfy.topic)"))
+    entries.append(.notice(id: id.count, section: .kalgram, text: "Установи ntfy из App Store, нажми + и вставь этот топик (сервер ntfy.sh).\nСтатус: \(KalgramNtfy.lastStatus ?? "ещё не регистрировался, перезапусти приложение")"))
     
     
     if SGSimpleSettings.shared.canUseNY {
@@ -693,6 +699,10 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             return
         }
         switch (link) {
+            case .ntfyCopyTopic:
+                UIPasteboard.general.string = KalgramNtfy.topic
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .copy(text: "Топик скопирован"), elevatedLayout: false, action: { _ in return false }), nil)
             case .languageSettings:
                 pushControllerImpl?(context.sharedContext.makeLocalizationListController(context: context))
             case .contentSettings:
