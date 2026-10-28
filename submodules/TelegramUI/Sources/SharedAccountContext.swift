@@ -1114,6 +1114,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         kalgramMakeGhostSettingsController = { context in
             return sgSettingsController(context: context)
         }
+        // kalgram: the picture around the Dynamic Island, once the main window is up
+        if applicationBindings.isMainApp {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                KalgramIsland.shared.update()
+            }
+        }
         
         if applicationBindings.isMainApp {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, inForeground: self.applicationBindings.applicationInForeground, activeAccounts: self.activeAccountContexts

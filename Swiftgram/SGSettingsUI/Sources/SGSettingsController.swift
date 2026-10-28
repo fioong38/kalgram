@@ -29,6 +29,7 @@ private enum SGControllerSection: Int32, SGItemListSection {
     case kalgram
     case kalgramProtection
     case kalgramHistory
+    case kalgramIsland
     case kalgramGhostQuick
     case kalgramGhostPermanent
     case trending
@@ -54,6 +55,7 @@ private enum SGBoolSetting: String {
     case keepSelfDestructing
     case keepDeletedMessages
     case keepEditHistory
+    case islandEnabled
     case ghostQuickEnabled
     case ghostQuickReadReceipts
     case ghostQuickTyping
@@ -145,6 +147,7 @@ private enum SGSliderSetting: String {
 
 private enum SGDisclosureLink: String {
     case ntfyCopyTopic
+    case islandPickImage
     case contentSettings
     case languageSettings
 }
@@ -185,6 +188,11 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.toggle(id: id.count, section: .kalgramHistory, settingName: .keepDeletedMessages, value: KalgramTweaks.keepDeletedMessages, text: "Сохранять удалённые", enabled: true))
     entries.append(.toggle(id: id.count, section: .kalgramHistory, settingName: .keepEditHistory, value: KalgramTweaks.keepEditHistory, text: "Сохранять историю правок", enabled: true))
     entries.append(.notice(id: id.count, section: .kalgramHistory, text: "Только личные чаты. Удалённое собеседником остаётся с пометкой «🗑 Удалено», у изменённого ниже видно «✏️ было: …». Работает для сообщений, пришедших, пока kalgram был запущен или синхронизировался."))
+    
+    entries.append(.header(id: id.count, section: .kalgramIsland, text: "КАРТИНКА У DYNAMIC ISLAND", badge: nil))
+    entries.append(.toggle(id: id.count, section: .kalgramIsland, settingName: .islandEnabled, value: KalgramIsland.shared.isEnabled && KalgramIsland.shared.hasImage, text: "Показывать", enabled: KalgramIsland.shared.hasImage))
+    entries.append(.disclosure(id: id.count, section: .kalgramIsland, link: .islandPickImage, text: KalgramIsland.shared.hasImage ? "Сменить картинку" : "Выбрать картинку"))
+    entries.append(.notice(id: id.count, section: .kalgramIsland, text: "Картинка вокруг островка, видна только внутри kalgram. Только айфоны с Dynamic Island."))
 
     entries.append(.header(id: id.count, section: .kalgramGhostQuick, text: "👻 БЫСТРЫЙ ПРИЗРАК", badge: nil))
     entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickEnabled, value: KalgramGhost.isQuickEnabled, text: "Включён", enabled: true))
@@ -413,6 +421,8 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
           }
         },*/ setBoolValue: { setting, value in
         switch setting {
+        case .islandEnabled:
+            KalgramIsland.shared.isEnabled = value
         case .keepDeletedMessages:
             KalgramTweaks.keepDeletedMessages = value
         case .keepEditHistory:
@@ -766,6 +776,10 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             return
         }
         switch (link) {
+            case .islandPickImage:
+                KalgramIsland.shared.pickImage(completion: {
+                    simplePromise.set(true)
+                })
             case .ntfyCopyTopic:
                 UIPasteboard.general.string = KalgramNtfy.topic
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
