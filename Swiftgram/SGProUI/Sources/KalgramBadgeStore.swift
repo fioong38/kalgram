@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import ImageIO
 import Display
 import AppBundle
 import AccountContext
@@ -164,13 +165,17 @@ public final class KalgramBadgeStore {
 
     // A .ggbadge file, or any picture (it becomes the badge's background)
     public func importBadge(data: Data, name: String) -> KalgramBadgeFile? {
-        if var file = KalgramBadgeFile.decode(data) {
+        // A badge file comes from anywhere, so nothing in it may be large enough to hurt at launch
+        guard data.count <= KalgramBadgeStore.maxImportSize else {
+            return nil
+        }
+        if var file = KalgramBadgeFile.decode(data).map(KalgramBadgeStore.sanitized) {
             // A copy under its own id, so importing twice does not overwrite
             file.document.id = "custom.\(UUID().uuidString)"
             self.save(file)
             return file
         }
-        if let image = UIImage(data: data), let png = KalgramImagePicker.downscaled(image, maxSide: 600.0).pngData() {
+        if let png = KalgramBadgeStore.thumbnailPNG(data) {
             let assetId = UUID().uuidString
             let document = KalgramBadgeDocument(name: name, background: .image(KalgramBadgeImageRef(assetId: assetId)), layers: [])
             let file = KalgramBadgeFile(document: document, assets: [assetId: png])
@@ -178,6 +183,56 @@ public final class KalgramBadgeStore {
             return file
         }
         return nil
+    }
+}
+
+extension KalgramBadgeStore {
+    static let maxImportSize = 10 * 1024 * 1024
+    private static let maxAssetSide: CGFloat = 600.0
+
+    // Decodes a picture no larger than maxAssetSide without decoding it at full size
+    static func thumbnailPNG(_ data: Data) -> Data? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetCount(source) > 0 else {
+            return nil
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxAssetSide
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        return UIImage(cgImage: image).pngData()
+    }
+
+    // Shrinks pictures and clamps every number the renderer draws with
+    static func sanitized(_ file: KalgramBadgeFile) -> KalgramBadgeFile {
+        var file = file
+        var assets: [String: Data] = [:]
+        for (id, data) in file.assets.prefix(16) {
+            if let png = thumbnailPNG(data) {
+                assets[id] = png
+            }
+        }
+        file.assets = assets
+        file.document.name = String(file.document.name.prefix(64))
+        file.document.cornerRadius = max(0.0, min(11.0, file.document.cornerRadius))
+        file.document.layers = file.document.layers.prefix(16).map { layer in
+            var layer = layer
+            layer.scale = max(0.05, min(8.0, layer.scale))
+            layer.offset = layer.offset.prefix(2).map { max(-200.0, min(200.0, $0)) }
+            if case var .text(text) = layer.content {
+                text.string = String(text.string.prefix(64))
+                text.fontSize = max(1.0, min(40.0, text.fontSize))
+                text.strokeWidth = max(0.0, min(10.0, text.strokeWidth))
+                text.tracking = max(-10.0, min(20.0, text.tracking))
+                layer.content = .text(text)
+            }
+            return layer
+        }
+        return file
     }
 }
 
