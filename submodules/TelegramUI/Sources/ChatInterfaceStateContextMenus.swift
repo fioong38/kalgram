@@ -1,4 +1,6 @@
 import SGSimpleSettings // MARK: Swiftgram
+import KalgramReminders // kalgram: reminders
+import ChatScheduleTimeController // kalgram: custom reminder time
 import PeerInfoUI
 import Foundation
 import UIKit
@@ -366,6 +368,53 @@ func updatedChatEditInterfaceMessageState(context: AccountContext, state: ChatPr
         updated,
         previewState
     )
+}
+
+// kalgram: "Напомнить" submenu. Quick times, or a custom time, schedule a local notification (KalgramReminders).
+private func kalgramReminderMenuItem(context: AccountContext, controllerInteraction: ChatControllerInteraction, chatTitle: String, message: EngineRawMessage, text: String) -> ContextMenuItem {
+    let accountPeerId = context.account.peerId.toInt64()
+    let peerId = message.id.peerId.toInt64()
+    let messageNamespace = message.id.namespace
+    let messageIdValue = message.id.id
+    let preview = text.isEmpty ? "Медиа" : String(text.prefix(120))
+    let remind: (Date) -> Void = { fireDate in
+        KalgramReminderCenter.create(KalgramReminder(id: UUID().uuidString, accountPeerId: accountPeerId, peerId: peerId, messageNamespace: messageNamespace, messageId: messageIdValue, chatTitle: chatTitle, preview: preview, fireDate: fireDate))
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Напоминание установлено", timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
+    }
+
+    var popReminderItems: (() -> Void)? = nil
+    var items: [ContextMenuItem] = []
+    items.append(.action(ContextMenuActionItem(text: "Назад", icon: { theme in
+        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+    }, iconPosition: .left, action: { _, _ in
+        popReminderItems?()
+    })))
+    items.append(.separator)
+    for preset in KalgramReminderPreset.allCases {
+        items.append(.action(ContextMenuActionItem(text: preset.title, icon: { _ in return nil }, action: { _, f in
+            f(.default)
+            remind(preset.fireDate())
+        })))
+    }
+    items.append(.separator)
+    items.append(.action(ContextMenuActionItem(text: "Выбрать время…", icon: { _ in return nil }, action: { _, f in
+        f(.default)
+        let controller = ChatScheduleTimeController(context: context, mode: .reminders, style: .default, currentTime: nil, minimalTime: nil, dismissByTapOutside: true, completion: { time in
+            remind(Date(timeIntervalSince1970: TimeInterval(time)))
+        })
+        controllerInteraction.presentControllerInCurrent(controller, nil)
+    })))
+    let reminderItems = items
+
+    return .action(ContextMenuActionItem(text: "Напомнить", icon: { theme in
+        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.actionSheet.primaryTextColor)
+    }, action: { c, _ in
+        popReminderItems = { [weak c] in
+            c?.popItems()
+        }
+        c?.pushItems(items: .single(ContextController.Items(content: .list(reminderItems))))
+    }))
 }
 
 private func ephemeralReplacementContextMenuItems(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, message: EngineRawMessage, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) -> Signal<ContextController.Items, NoError> {
@@ -1372,6 +1421,15 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Отправлено «прочитано» в этот чат. Призрак остаётся включённым.", timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
             })))
+        }
+
+        // kalgram: remind about this message later (local notification)
+        if message.id.namespace == Namespaces.Message.Cloud {
+            var kalgramChatTitle = ""
+            if let kalgramPeer = chatPresentationInterfaceState.renderedPeer?.peer {
+                kalgramChatTitle = EnginePeer(kalgramPeer).displayTitle(strings: chatPresentationInterfaceState.strings, displayOrder: .firstLast)
+            }
+            actions.append(kalgramReminderMenuItem(context: context, controllerInteraction: controllerInteraction, chatTitle: kalgramChatTitle, message: message, text: messageText))
         }
 
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()

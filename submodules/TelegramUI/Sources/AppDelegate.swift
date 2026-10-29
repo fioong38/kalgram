@@ -11,6 +11,7 @@ import SGAPIWebSettings
 import SGLogging
 import SGStrings
 import SGSimpleSettings
+import KalgramReminders // kalgram: reminder notifications
 //
 import UIKit
 import SwiftSignalKit
@@ -3078,6 +3079,44 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
     
+    /// kalgram: opens the chat of a reminder at its message. If the message no longer exists, opens the chat and says so.
+    private func openKalgramReminderMessage(accountPeerId: Int64, peerId: Int64, messageNamespace: Int32, messageId: Int32) {
+        let chatPeerId = PeerId(peerId)
+        let message = MessageId(peerId: chatPeerId, namespace: messageNamespace, id: messageId)
+        let signal = self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue
+        |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
+            return sharedApplicationContext.sharedContext.activeAccountContexts
+            |> take(1)
+            |> mapToSignal { _, contexts, _ -> Signal<AuthorizedApplicationContext, NoError> in
+                if let accountRecordId = contexts.first(where: { $0.1.account.peerId.toInt64() == accountPeerId })?.1.account.id {
+                    sharedApplicationContext.sharedContext.switchToAccount(id: accountRecordId)
+                    return self.authorizedContext()
+                    |> filter { $0.context.account.id == accountRecordId }
+                    |> take(1)
+                } else {
+                    return self.authorizedContext()
+                    |> take(1)
+                }
+            }
+        }
+        |> mapToSignal { context -> Signal<(AuthorizedApplicationContext, Bool), NoError> in
+            return context.context.engine.messages.downloadMessage(messageId: message)
+            |> timeout(4.0, queue: .mainQueue(), alternate: .single(nil))
+            |> map { result -> (AuthorizedApplicationContext, Bool) in
+                return (context, result != nil)
+            }
+        }
+        |> deliverOnMainQueue
+        self.openChatWhenReadyDisposable.set(signal.start(next: { context, exists in
+            context.openChatWithPeerId(peerId: chatPeerId, threadId: nil, messageId: exists ? message : nil, activateInput: false, storyId: nil, openAppIfAny: false, alwaysKeepMessageId: false)
+            if !exists {
+                context.context.sharedContext.presentGlobalController(UndoOverlayController(presentationData: context.context.sharedContext.currentPresentationData.with { $0 }, content: .info(title: nil, text: "Сообщение удалено", timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), nil)
+            }
+        }))
+    }
+
     private var walletTonConnectNotifications = WalletTonConnectNotificationQueue<AccountRecordId, MessageId>()
     private let walletTonConnectNotificationDisposable = MetaDisposable()
 
@@ -3160,6 +3199,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        // kalgram: reminder notifications (tap opens the message, snooze buttons reschedule)
+        if response.notification.request.content.categoryIdentifier == KalgramReminderCenter.categoryIdentifier {
+            if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+                if let target = KalgramReminderCenter.target(from: response.notification.request.content.userInfo) {
+                    KalgramReminderCenter.cancel(id: response.notification.request.identifier)
+                    self.openKalgramReminderMessage(accountPeerId: target.accountPeerId, peerId: target.peerId, messageNamespace: target.messageNamespace, messageId: target.messageId)
+                }
+            } else {
+                KalgramReminderCenter.snooze(id: response.notification.request.identifier, action: response.actionIdentifier)
+            }
+            completionHandler()
+            return
+        }
         let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
@@ -3326,7 +3378,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     groupRepliableMessageCategory,
                                     groupRepliableMediaMessageCategory,
                                     storyCategory,
-                                    storyReactionCategory
+                                    storyReactionCategory,
+                                    KalgramReminderCenter.category // kalgram: merged with Telegram's set above
                                 ])
                                 
                                 Logger.shared.log("App \(self.episodeId)", "register for notifications: invoke registerForRemoteNotifications")
