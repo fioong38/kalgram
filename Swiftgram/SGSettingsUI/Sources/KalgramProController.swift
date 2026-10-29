@@ -27,6 +27,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case effects
     case roundVideo
     case study
+    case proxy
     case interface
     case ads
 }
@@ -53,6 +54,7 @@ private enum KalgramProToggle: String {
     case adsHidePremiumPromo
     case effectRemoveBackground
     case studyEnabled
+    case proxyAutoSwitch
 }
 
 private enum KalgramProSlider: String {
@@ -243,6 +245,10 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.oneFromManySelector(id: id.count, section: .study, settingName: .studyInterval, text: "Каждые", value: "\(KalgramStudySettings.minutes) мин", enabled: KalgramStudySettings.isEnabled))
     entries.append(.notice(id: id.count, section: .study, text: "Считается только время, пока kalgram открыт. Когда наберётся выбранное время, сверху появится плашка: «Хватит сидеть — иди занимайся». Свёрнутое приложение не считается и батарею не тратит."))
 
+    entries.append(.header(id: id.count, section: .proxy, text: "ПРОКСИ", badge: nil))
+    entries.append(.toggle(id: id.count, section: .proxy, settingName: .proxyAutoSwitch, value: KalgramProxySettings.autoSwitch, text: "Автосмена прокси", enabled: true))
+    entries.append(.notice(id: id.count, section: .proxy, text: "Если прокси не подключается 10 секунд, kalgram переключит на следующий из сохранённых. Если прокси выключен, а связи нет 15 секунд, включит первый. Пока включён VPN, kalgram сам прокси не включает и не переключает, а включённый им самим выключает. Вручную включать можно всегда."))
+
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .oldInterface, value: UserDefaults.standard.bool(forKey: oldInterfaceKey), text: "Старый интерфейс", enabled: true))
     entries.append(.notice(id: id.count, section: .interface, text: "Как до «жидкого стекла»: плоские панели без бликов и теней, панель вкладок во всю ширину внизу экрана с подписями. Нужен перезапуск."))
@@ -321,6 +327,8 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramEffectSettings.removeBackground = value
             case .studyEnabled:
                 KalgramStudySettings.isEnabled = value
+            case .proxyAutoSwitch:
+                KalgramProxySettings.autoSwitch = value
             }
             reloadPromise.set(true)
         },

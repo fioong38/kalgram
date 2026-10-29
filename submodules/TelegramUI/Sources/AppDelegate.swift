@@ -1336,6 +1336,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> take(1)
         |> deliverOnMainQueue).startStandalone(next: { sharedApplicationContext in
             KalgramStudyReminder.shared.start(sharedContext: sharedApplicationContext.sharedContext)
+            // kalgram: switching to another saved proxy when one stops connecting (kalgram Pro)
+            KalgramProxyFailover.shared.start(sharedContext: sharedApplicationContext.sharedContext)
         })
 
         self.context.set(self.sharedContextPromise.get()
