@@ -63,9 +63,27 @@ func kalgramKeepDeletedMessages(transaction: Transaction, accountPeerId: PeerId,
     return kept
 }
 
-// Applied to a server edit of an incoming private message: keeps what it said before
+// Edits are kept in private chats and groups; channel posts are edited too often to be worth it
+private func kalgramKeepsEditHistory(previous: Message, accountPeerId: PeerId) -> Bool {
+    let peerId = previous.id.peerId
+    switch peerId.namespace {
+    case Namespaces.Peer.CloudUser:
+        return peerId != accountPeerId
+    case Namespaces.Peer.CloudGroup:
+        return true
+    case Namespaces.Peer.CloudChannel:
+        if let channel = previous.peers[peerId] as? TelegramChannel, case .group = channel.info {
+            return true
+        }
+        return false
+    default:
+        return false
+    }
+}
+
+// Applied to a server edit of an incoming message: keeps what it said before
 func kalgramMergeEditHistory(previous: Message, updated: StoreMessage, accountPeerId: PeerId) -> StoreMessage {
-    guard KalgramTweaks.keepEditHistory, kalgramKeepsHistory(peerId: previous.id.peerId, accountPeerId: accountPeerId), previous.flags.contains(.Incoming) else {
+    guard KalgramTweaks.keepEditHistory, kalgramKeepsEditHistory(previous: previous, accountPeerId: accountPeerId), previous.flags.contains(.Incoming) else {
         return updated
     }
     let (previousText, history) = splitEditHistory(previous.text)

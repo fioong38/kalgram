@@ -297,6 +297,11 @@ public extension TelegramEngine {
             return _internal_markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: messageId, kalgramBurn: true)
         }
 
+        // kalgram: sends "read" for one chat now, even while ghost mode holds read receipts back
+        public func kalgramSendReadReceipt(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_kalgramSendReadReceipt(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId)
+        }
+
         public func markMessageContentAsConsumedInteractively(messageId: MessageId) -> Signal<Void, NoError> {
             return _internal_markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: messageId)
         }

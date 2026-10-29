@@ -1362,6 +1362,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })))
         }
 
+        // kalgram: in ghost mode the chat is read only on this phone; this tells the sender too
+        if message.flags.contains(.Incoming), message.id.namespace == Namespaces.Message.Cloud, KalgramGhost.isActive(.readReceipts, accountPeerId: context.account.peerId) {
+            actions.append(.action(ContextMenuActionItem(text: "👁 Прочитать (увидят «прочитано»)", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Read"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                let _ = context.engine.messages.kalgramSendReadReceipt(peerId: message.id.peerId).startStandalone()
+                f(.default)
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Отправлено «прочитано» в этот чат. Призрак остаётся включённым.", timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
+            })))
+        }
+
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
         if !messageText.isEmpty || richMessageMarkdown != nil || (resourceAvailable && isImage) || diceEmoji != nil {
             if !isExpired {
@@ -1518,15 +1530,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if resourceAvailable, !message.containsSecretMedia && !isCopyProtected {
+        // kalgram: a kept self-destructing photo or video can be saved too, without opening
+        // it; it is fetched through its message, which neither starts the timer nor tells the sender
+        let kalgramSavesSecret = KalgramTweaks.keepSelfDestructing && message.containsSecretMedia && !isExpired
+        if resourceAvailable || kalgramSavesSecret, !message.containsSecretMedia || kalgramSavesSecret, !isCopyProtected {
             var mediaReference: AnyMediaReference?
             var isVideo = false
             for media in message.effectiveMedia {
                 if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-                    mediaReference = ImageMediaReference.standalone(media: image).abstract
+                    mediaReference = kalgramSavesSecret ? AnyMediaReference.message(message: MessageReference(message), media: image) : ImageMediaReference.standalone(media: image).abstract
                     break
                 } else if let file = media as? TelegramMediaFile, file.isVideo {
-                    mediaReference = FileMediaReference.standalone(media: file).abstract
+                    mediaReference = kalgramSavesSecret ? AnyMediaReference.message(message: MessageReference(message), media: file) : FileMediaReference.standalone(media: file).abstract
                     isVideo = true
                     break
                 }

@@ -65,7 +65,13 @@ final class TabBarControllerNode: ASDisplayNode {
     private let contextAction: (Int, ContextExtractedContentContainingView, ContextGesture) -> Void
     
     private let tabBarView = ComponentView<Empty>()
-    
+
+    // kalgram: the old interface docks the tab bar to the bottom edge on a full-width bar
+    // with a hairline on top, as before the floating capsule (read once, at launch)
+    private static let kalgramClassic = UserDefaults.standard.bool(forKey: "kalgram.oldInterface")
+    private var kalgramClassicBar: UIView?
+    private var kalgramClassicSeparator: UIView?
+
     private let disabledOverlayNode: ASDisplayNode
     private var toolbar: ComponentView<Empty>?
     private let toolbarActionSelected: (ToolbarActionOption) -> Void
@@ -255,7 +261,12 @@ final class TabBarControllerNode: ASDisplayNode {
         if tabBarBottomInset <= 28.0 {
             sideInset = 20.0
         }
-        
+        if TabBarControllerNode.kalgramClassic {
+            sideInset = 0.0
+            // Flush with the bottom edge: only the home indicator's own space below the items
+            tabBarBottomInset = max(params.layout.intrinsicInsets.bottom - 6.0, 2.0)
+        }
+
         let sidePlacement = self.sidePlacement(for: params.layout)
         let previousAppliedPlacement = self.tabBarView.view == nil ? nil : self.appliedPlacement
         let appliedPlacement = TabBarAppliedPlacement(placement: sidePlacement, containerSize: params.layout.size, isHidden: self.tabBarHidden)
@@ -360,6 +371,36 @@ final class TabBarControllerNode: ASDisplayNode {
             tabBarFrame = CGRect(origin: CGPoint(x: floor((params.layout.size.width - tabBarSize.width) * 0.5), y: params.layout.size.height - (self.tabBarHidden ? 0.0 : (tabBarSize.height + tabBarBottomInset))), size: tabBarSize)
         }
         
+        if TabBarControllerNode.kalgramClassic, sidePlacement == nil, let tabBarComponentView = self.tabBarView.view {
+            let bar: UIView
+            let separator: UIView
+            if let currentBar = self.kalgramClassicBar, let currentSeparator = self.kalgramClassicSeparator {
+                bar = currentBar
+                separator = currentSeparator
+            } else {
+                bar = UIView()
+                separator = UIView()
+                bar.addSubview(separator)
+                self.kalgramClassicBar = bar
+                self.kalgramClassicSeparator = separator
+            }
+            if bar.superview == nil {
+                if tabBarComponentView.superview == nil {
+                    self.view.addSubview(tabBarComponentView)
+                }
+                self.view.insertSubview(bar, belowSubview: tabBarComponentView)
+            }
+            bar.backgroundColor = self.theme.rootController.tabBar.backgroundColor
+            separator.backgroundColor = self.theme.rootController.tabBar.separatorColor
+            let barTop = tabBarFrame.minY - 2.0
+            let barFrame = CGRect(x: 0.0, y: barTop, width: params.layout.size.width, height: max(0.0, params.layout.size.height - barTop))
+            tabBarFrameTransition.updateFrame(view: bar, frame: barFrame)
+            separator.frame = CGRect(x: 0.0, y: 0.0, width: barFrame.width, height: UIScreenPixel)
+            transition.updateAlpha(layer: bar.layer, alpha: (params.toolbar == nil && !self.tabBarHidden) ? 1.0 : 0.0)
+        } else if let bar = self.kalgramClassicBar {
+            bar.alpha = 0.0
+        }
+
         if let tabBarComponentView = self.tabBarView.view {
             if tabBarComponentView.superview == nil {
                 self.view.addSubview(tabBarComponentView)

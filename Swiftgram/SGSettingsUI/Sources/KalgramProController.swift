@@ -177,7 +177,7 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
 
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .oldInterface, value: UserDefaults.standard.bool(forKey: oldInterfaceKey), text: "Старый интерфейс", enabled: true))
-    entries.append(.notice(id: id.count, section: .interface, text: "Плоские полупрозрачные панели вместо «жидкого стекла»: без бликов, теней и линз. Нужен перезапуск."))
+    entries.append(.notice(id: id.count, section: .interface, text: "Как до «жидкого стекла»: плоские панели без бликов и теней, панель вкладок во всю ширину внизу экрана с подписями. Нужен перезапуск."))
 
     return entries
 }
@@ -235,6 +235,11 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 askForRestart?()
             case .oldInterface:
                 UserDefaults.standard.set(value, forKey: oldInterfaceKey)
+                if value {
+                    // The old tab bar: every tab spread over the whole width, with its name
+                    SGSimpleSettings.shared.wideTabBar = true
+                    SGSimpleSettings.shared.showTabNames = true
+                }
                 askForRestart?()
             }
             reloadPromise.set(true)
