@@ -802,7 +802,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 break
             }
         }
-        if let displayAdPeer {
+        // kalgram: with "hide sponsored messages" on, no ad context is created, so nothing is
+        // fetched, shown, activated or reported as viewed.
+        if let displayAdPeer, !SGSimpleSettings.shared.kalgramHideSponsored {
             self.adMessagesContext = context.engine.messages.adMessages(peerId: displayAdPeer, activateManually: true)
         } else {
             self.adMessagesContext = nil

@@ -26,6 +26,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case badges
     case effects
     case interface
+    case ads
 }
 
 private enum KalgramProToggle: String {
@@ -44,6 +45,10 @@ private enum KalgramProToggle: String {
     case keepSelfDestructing
     case bypassIosRestrictions
     case oldInterface
+    case adsHideSponsored
+    case adsHideSimilarChannels
+    case adsHideSearchAds
+    case adsHidePremiumPromo
 }
 
 private enum KalgramProSlider: String {
@@ -135,6 +140,13 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .protection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
     entries.append(.toggle(id: id.count, section: .protection, settingName: .bypassIosRestrictions, value: KalgramTweaks.bypassIosRestrictions, text: "Открывать каналы, скрытые на iOS", enabled: true))
     entries.append(.notice(id: id.count, section: .protection, text: "Одноразки не исчезают, и отправитель не видит, что ты открыл. Отметить просмотренной: долгий тап по сообщению → «🔥 Сжечь». Каналы с пометкой «нарушал правила App Store» открываются; блокировки по закону остаются."))
+
+    entries.append(.header(id: id.count, section: .ads, text: "РЕКЛАМА", badge: nil))
+    entries.append(.toggle(id: id.count, section: .ads, settingName: .adsHideSponsored, value: SGSimpleSettings.shared.kalgramHideSponsored, text: "Спонсорские сообщения", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ads, settingName: .adsHideSimilarChannels, value: SGSimpleSettings.shared.kalgramHideSimilarChannels, text: "Похожие каналы", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ads, settingName: .adsHideSearchAds, value: SGSimpleSettings.shared.kalgramHideSearchAds, text: "Реклама в поиске и ботах", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ads, settingName: .adsHidePremiumPromo, value: SGSimpleSettings.shared.kalgramHidePremiumPromo, text: "Предложения Premium", enabled: true))
+    entries.append(.notice(id: id.count, section: .ads, text: "Всё работает на этом устройстве, ничего не отправляется. Спонсорские сообщения в каналах не загружаются и не отмечаются как просмотренные."))
 
     let backgroundMode = KalgramTweaks.backgroundMode
     entries.append(.header(id: id.count, section: .background, text: "УВЕДОМЛЕНИЯ С ТЕКСТОМ", badge: nil))
@@ -241,6 +253,14 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     SGSimpleSettings.shared.showTabNames = true
                 }
                 askForRestart?()
+            case .adsHideSponsored:
+                SGSimpleSettings.shared.kalgramHideSponsored = value
+            case .adsHideSimilarChannels:
+                SGSimpleSettings.shared.kalgramHideSimilarChannels = value
+            case .adsHideSearchAds:
+                SGSimpleSettings.shared.kalgramHideSearchAds = value
+            case .adsHidePremiumPromo:
+                SGSimpleSettings.shared.kalgramHidePremiumPromo = value
             }
             reloadPromise.set(true)
         },

@@ -1,4 +1,5 @@
 import Foundation
+import SGSimpleSettings // MARK: Swiftgram
 import LottieSettings
 import UIKit
 import AsyncDisplayKit
@@ -2707,7 +2708,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         |> then(
                             globalPeerSearchContext.searchRemotePeers(engine: context.engine, query: query)
                             |> mapToSignal { result in
-                                return context.engine.peers.searchAdPeers(query: query)
+                                // kalgram: "hide search ads" skips the sponsored peers request
+                                let adPeersSignal: Signal<[AdPeer], NoError> = SGSimpleSettings.shared.kalgramHideSearchAds ? .single([]) : context.engine.peers.searchAdPeers(query: query)
+                                return adPeersSignal
                                 |> map { adPeers in
                                     return (result.0, result.1, adPeers, false)
                                 }

@@ -179,6 +179,11 @@ public class SGSimpleSettings {
         case sendWithReturnKey
         case videoControlsInFooter
         case hideAccountInNotifications
+        // kalgram: ad blocking, all client-side, default on
+        case kalgramHideSponsored
+        case kalgramHideSimilarChannels
+        case kalgramHideSearchAds
+        case kalgramHidePremiumPromo
     }
     
     public enum DownloadSpeedBoostValues: String, CaseIterable {
@@ -345,6 +350,10 @@ public class SGSimpleSettings {
         Keys.status.rawValue: 1,
         Keys.showRepostToStoryV2.rawValue: true,
         Keys.hideAccountInNotifications.rawValue: false,
+        Keys.kalgramHideSponsored.rawValue: true,
+        Keys.kalgramHideSimilarChannels.rawValue: true,
+        Keys.kalgramHideSearchAds.rawValue: true,
+        Keys.kalgramHidePremiumPromo.rawValue: true,
     ]
     
     @UserDefault(key: Keys.hidePhoneInSettings.rawValue)
@@ -623,6 +632,19 @@ public class SGSimpleSettings {
 
     @UserDefault(key: Keys.hideAccountInNotifications.rawValue, userDefaults: UserDefaults(suiteName: APP_GROUP_IDENTIFIER) ?? .standard)
     public var hideAccountInNotifications: Bool
+
+    // kalgram: ad blocking
+    @UserDefault(key: Keys.kalgramHideSponsored.rawValue)
+    public var kalgramHideSponsored: Bool
+
+    @UserDefault(key: Keys.kalgramHideSimilarChannels.rawValue)
+    public var kalgramHideSimilarChannels: Bool
+
+    @UserDefault(key: Keys.kalgramHideSearchAds.rawValue)
+    public var kalgramHideSearchAds: Bool
+
+    @UserDefault(key: Keys.kalgramHidePremiumPromo.rawValue)
+    public var kalgramHidePremiumPromo: Bool
 }
 
 extension SGSimpleSettings {

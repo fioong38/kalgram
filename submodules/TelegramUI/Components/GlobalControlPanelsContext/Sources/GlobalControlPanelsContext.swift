@@ -8,6 +8,7 @@ import TelegramUIPreferences
 import TelegramCallsUI
 import Display
 import UndoUI
+import SGSimpleSettings // MARK: Swiftgram
 
 public final class GlobalControlPanelsContext {
     public final class MediaPlayback: Equatable {
@@ -426,7 +427,7 @@ public final class GlobalControlPanelsContext {
                     } else if suggestions.contains(.xmasPremiumGift) {
                         if ({ return true }()) { return .single(nil) } // MARK: Swiftgram
                         return .single(.xmasPremiumGift)
-                    } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
+                    } else if !SGSimpleSettings.shared.kalgramHidePremiumPromo && (suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium)), let inAppPurchaseManager = context.inAppPurchaseManager {
                         if ({ return true }()) { return .single(nil) } // MARK: Swiftgram
                         return inAppPurchaseManager.availableProducts
                         |> map { products -> ChatListNotice? in
