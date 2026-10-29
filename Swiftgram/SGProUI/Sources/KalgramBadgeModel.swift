@@ -21,8 +21,14 @@ public struct KalgramBadgeColor: Codable, Equatable {
     public init(_ color: UIColor) {
         var r: CGFloat = 0.0, g: CGFloat = 0.0, b: CGFloat = 0.0, a: CGFloat = 0.0
         color.getRed(&r, green: &g, blue: &b, alpha: &a)
-        let value = (Int(r * 255.0) << 16) | (Int(g * 255.0) << 8) | Int(b * 255.0)
-        self.hex = String(format: "#%06X", value)
+        let component: (CGFloat) -> Int = { Int((max(0.0, min(1.0, $0)) * 255.0).rounded()) }
+        let value = (component(r) << 16) | (component(g) << 8) | component(b)
+        if a < 1.0 {
+            // #RRGGBBAA only when see-through, so opaque colours stay in Ghostgram's form
+            self.hex = String(format: "#%06X%02X", value, component(a))
+        } else {
+            self.hex = String(format: "#%06X", value)
+        }
     }
 
     public var uiColor: UIColor {
@@ -47,8 +53,14 @@ public struct KalgramBadgeText: Codable, Equatable {
     public var strokeColor: KalgramBadgeColor
     public var strokeWidth: CGFloat
     public var tracking: CGFloat
+    // kalgram additions; Ghostgram's files lack them and get the defaults
+    // "serif" or "monospaced"; anything else is the system face (rounded per isRounded)
+    public var design: String
+    public var isItalic: Bool
+    public var shadowColor: KalgramBadgeColor
+    public var shadowRadius: CGFloat
 
-    public init(string: String, color: KalgramBadgeColor = KalgramBadgeColor(hex: "#FFFFFF"), fontSize: CGFloat = 12.0, weight: String = "bold", isRounded: Bool = true, strokeColor: KalgramBadgeColor = KalgramBadgeColor(hex: "#000000"), strokeWidth: CGFloat = 0.0, tracking: CGFloat = 0.0) {
+    public init(string: String, color: KalgramBadgeColor = KalgramBadgeColor(hex: "#FFFFFF"), fontSize: CGFloat = 12.0, weight: String = "bold", isRounded: Bool = true, strokeColor: KalgramBadgeColor = KalgramBadgeColor(hex: "#000000"), strokeWidth: CGFloat = 0.0, tracking: CGFloat = 0.0, design: String = "default", isItalic: Bool = false, shadowColor: KalgramBadgeColor = KalgramBadgeColor(hex: "#000000"), shadowRadius: CGFloat = 0.0) {
         self.string = string
         self.color = color
         self.fontSize = fontSize
@@ -57,10 +69,14 @@ public struct KalgramBadgeText: Codable, Equatable {
         self.strokeColor = strokeColor
         self.strokeWidth = strokeWidth
         self.tracking = tracking
+        self.design = design
+        self.isItalic = isItalic
+        self.shadowColor = shadowColor
+        self.shadowRadius = shadowRadius
     }
 
     enum CodingKeys: String, CodingKey {
-        case string, color, fontSize, weight, isRounded, strokeColor, strokeWidth, tracking
+        case string, color, fontSize, weight, isRounded, strokeColor, strokeWidth, tracking, design, isItalic, shadowColor, shadowRadius
     }
 
     // Missing fields take the defaults, files from other versions still open
@@ -74,6 +90,10 @@ public struct KalgramBadgeText: Codable, Equatable {
         self.strokeColor = (try? container.decode(KalgramBadgeColor.self, forKey: .strokeColor)) ?? KalgramBadgeColor(hex: "#000000")
         self.strokeWidth = (try? container.decode(CGFloat.self, forKey: .strokeWidth)) ?? 0.0
         self.tracking = (try? container.decode(CGFloat.self, forKey: .tracking)) ?? 0.0
+        self.design = (try? container.decode(String.self, forKey: .design)) ?? "default"
+        self.isItalic = (try? container.decode(Bool.self, forKey: .isItalic)) ?? false
+        self.shadowColor = (try? container.decode(KalgramBadgeColor.self, forKey: .shadowColor)) ?? KalgramBadgeColor(hex: "#000000")
+        self.shadowRadius = (try? container.decode(CGFloat.self, forKey: .shadowRadius)) ?? 0.0
     }
 }
 
@@ -125,10 +145,23 @@ public struct KalgramBadgeLayer: Codable, Equatable {
     }
 }
 
+public struct KalgramBadgeGradient: Codable, Equatable {
+    public var colors: [KalgramBadgeColor]
+    // Degrees, 0 runs left to right
+    public var angle: CGFloat
+
+    public init(colors: [KalgramBadgeColor], angle: CGFloat = 0.0) {
+        self.colors = colors
+        self.angle = angle
+    }
+}
+
 public enum KalgramBadgeBackground: Codable, Equatable {
     case transparent
     case color(KalgramBadgeColor)
     case image(KalgramBadgeImageRef)
+    // kalgram only
+    case gradient(KalgramBadgeGradient)
 }
 
 // Layers that this version cannot read are skipped instead of failing the file
@@ -148,8 +181,14 @@ public struct KalgramBadgeDocument: Codable, Equatable {
     public var layers: [KalgramBadgeLayer]
     public var createdAt: String
     public var updatedAt: String
+    // kalgram additions: the background picture's zoom, shift and opacity, and a border
+    public var backgroundScale: CGFloat
+    public var backgroundOffset: [CGFloat]
+    public var backgroundOpacity: CGFloat
+    public var borderWidth: CGFloat
+    public var borderColor: KalgramBadgeColor
 
-    public init(id: String = "custom.\(UUID().uuidString)", name: String, background: KalgramBadgeBackground, cornerRadius: CGFloat = 11.0, layers: [KalgramBadgeLayer]) {
+    public init(id: String = "custom.\(UUID().uuidString)", name: String, background: KalgramBadgeBackground, cornerRadius: CGFloat = 11.0, layers: [KalgramBadgeLayer], backgroundScale: CGFloat = 1.0, backgroundOffset: [CGFloat] = [0.0, 0.0], backgroundOpacity: CGFloat = 1.0, borderWidth: CGFloat = 0.0, borderColor: KalgramBadgeColor = KalgramBadgeColor(hex: "#FFFFFF")) {
         let now = ISO8601DateFormatter().string(from: Date())
         self.id = id
         self.name = name
@@ -158,10 +197,15 @@ public struct KalgramBadgeDocument: Codable, Equatable {
         self.layers = layers
         self.createdAt = now
         self.updatedAt = now
+        self.backgroundScale = backgroundScale
+        self.backgroundOffset = backgroundOffset
+        self.backgroundOpacity = backgroundOpacity
+        self.borderWidth = borderWidth
+        self.borderColor = borderColor
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, background, cornerRadius, layers, createdAt, updatedAt
+        case id, name, background, cornerRadius, layers, createdAt, updatedAt, backgroundScale, backgroundOffset, backgroundOpacity, borderWidth, borderColor
     }
 
     public init(from decoder: Decoder) throws {
@@ -174,6 +218,11 @@ public struct KalgramBadgeDocument: Codable, Equatable {
         let now = ISO8601DateFormatter().string(from: Date())
         self.createdAt = (try? container.decode(String.self, forKey: .createdAt)) ?? now
         self.updatedAt = (try? container.decode(String.self, forKey: .updatedAt)) ?? now
+        self.backgroundScale = (try? container.decode(CGFloat.self, forKey: .backgroundScale)) ?? 1.0
+        self.backgroundOffset = (try? container.decode([CGFloat].self, forKey: .backgroundOffset)) ?? [0.0, 0.0]
+        self.backgroundOpacity = (try? container.decode(CGFloat.self, forKey: .backgroundOpacity)) ?? 1.0
+        self.borderWidth = (try? container.decode(CGFloat.self, forKey: .borderWidth)) ?? 0.0
+        self.borderColor = (try? container.decode(KalgramBadgeColor.self, forKey: .borderColor)) ?? KalgramBadgeColor(hex: "#FFFFFF")
     }
 }
 
@@ -242,10 +291,45 @@ public enum KalgramBadgeRenderer {
             weight = .bold
         }
         let font = UIFont.systemFont(ofSize: max(1.0, text.fontSize), weight: weight)
-        if text.isRounded, let descriptor = font.fontDescriptor.withDesign(.rounded) {
-            return UIFont(descriptor: descriptor, size: font.pointSize)
+        var descriptor = font.fontDescriptor
+        let design: UIFontDescriptor.SystemDesign?
+        switch text.design {
+        case "serif":
+            design = .serif
+        case "monospaced":
+            design = .monospaced
+        default:
+            design = text.isRounded ? .rounded : nil
         }
-        return font
+        if let design, let designed = descriptor.withDesign(design) {
+            descriptor = designed
+        }
+        if text.isItalic, let italic = descriptor.withSymbolicTraits(descriptor.symbolicTraits.union(.traitItalic)) {
+            descriptor = italic
+        }
+        return UIFont(descriptor: descriptor, size: font.pointSize)
+    }
+
+    // Decoded pictures by their bytes, so dragging a slider does not decode a photo every frame
+    private static let imageCache: NSCache<NSData, UIImage> = {
+        let cache = NSCache<NSData, UIImage>()
+        cache.countLimit = 8
+        return cache
+    }()
+
+    private static func cachedImage(_ file: KalgramBadgeFile, _ ref: KalgramBadgeImageRef) -> UIImage? {
+        guard let data = file.assets[ref.assetId] else {
+            return nil
+        }
+        let key = data as NSData
+        if let image = imageCache.object(forKey: key) {
+            return image
+        }
+        guard let image = UIImage(data: data) else {
+            return nil
+        }
+        imageCache.setObject(image, forKey: key)
+        return image
     }
 
     // Draws the badge at 3x, the scale the window reads it at
@@ -268,8 +352,23 @@ public enum KalgramBadgeRenderer {
                 context.setFillColor(color.uiColor.cgColor)
                 context.fill(bounds)
             case let .image(ref):
-                if let data = file.assets[ref.assetId], let image = UIImage(data: data) {
-                    drawAspectFill(image, in: bounds)
+                if let image = cachedImage(file, ref) {
+                    context.saveGState()
+                    context.setAlpha(max(0.0, min(1.0, document.backgroundOpacity)))
+                    let scale = max(0.05, document.backgroundScale)
+                    let offsetX = document.backgroundOffset.count > 0 ? document.backgroundOffset[0] : 0.0
+                    let offsetY = document.backgroundOffset.count > 1 ? document.backgroundOffset[1] : 0.0
+                    let rect = CGRect(x: offsetX + size.width * (1.0 - scale) / 2.0, y: offsetY + size.height * (1.0 - scale) / 2.0, width: size.width * scale, height: size.height * scale)
+                    drawAspectFill(image, in: rect)
+                    context.restoreGState()
+                }
+            case let .gradient(gradient):
+                let colors = (gradient.colors.isEmpty ? [KalgramBadgeColor(hex: "#000000")] : gradient.colors).map { $0.uiColor.cgColor }
+                if let cgGradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: (colors.count == 1 ? colors + colors : colors) as CFArray, locations: nil) {
+                    let angle = gradient.angle * .pi / 180.0
+                    let half = CGPoint(x: cos(angle) * size.width / 2.0, y: sin(angle) * size.height / 2.0)
+                    let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+                    context.drawLinearGradient(cgGradient, start: CGPoint(x: center.x - half.x, y: center.y - half.y), end: CGPoint(x: center.x + half.x, y: center.y + half.y), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                 }
             }
 
@@ -293,11 +392,14 @@ public enum KalgramBadgeRenderer {
                         attributes[.strokeWidth] = -text.strokeWidth * 10.0
                         attributes[.strokeColor] = text.strokeColor.uiColor
                     }
+                    if text.shadowRadius > 0.0 {
+                        context.setShadow(offset: .zero, blur: text.shadowRadius, color: text.shadowColor.uiColor.cgColor)
+                    }
                     let string = NSAttributedString(string: text.string, attributes: attributes)
                     let textSize = string.boundingRect(with: CGSize(width: 1000.0, height: 1000.0), options: .usesLineFragmentOrigin, context: nil).size
                     string.draw(at: CGPoint(x: -textSize.width / 2.0, y: -textSize.height / 2.0))
                 case let .image(ref):
-                    if let data = file.assets[ref.assetId], let image = UIImage(data: data) {
+                    if let image = cachedImage(file, ref) {
                         // Fits the badge's height, as large as the badge at scale 1
                         let height = size.height
                         let width = height * image.size.width / max(1.0, image.size.height)
@@ -305,6 +407,14 @@ public enum KalgramBadgeRenderer {
                     }
                 }
                 context.restoreGState()
+            }
+
+            if document.borderWidth > 0.0 {
+                let width = min(document.borderWidth, size.height / 2.0)
+                let path = UIBezierPath(roundedRect: bounds.insetBy(dx: width / 2.0, dy: width / 2.0), cornerRadius: max(0.0, radius - width / 2.0))
+                path.lineWidth = width
+                document.borderColor.uiColor.setStroke()
+                path.stroke()
             }
         }
     }

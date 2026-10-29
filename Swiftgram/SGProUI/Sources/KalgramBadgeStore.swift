@@ -187,13 +187,17 @@ public final class KalgramBadgeStore {
 }
 
 extension KalgramBadgeStore {
-    static let maxImportSize = 10 * 1024 * 1024
-    private static let maxAssetSide: CGFloat = 600.0
+    static let maxImportSize = 30 * 1024 * 1024
+    // A phone photo at full size, and no larger
+    static let maxAssetSide: CGFloat = 4096.0
 
-    // Decodes a picture no larger than maxAssetSide without decoding it at full size
+    // The picture as it is when it fits maxAssetSide, else shrunk to it without decoding it at full size
     static func thumbnailPNG(_ data: Data) -> Data? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetCount(source) > 0 else {
             return nil
+        }
+        if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any], let width = properties[kCGImagePropertyPixelWidth] as? Int, let height = properties[kCGImagePropertyPixelHeight] as? Int, width > 0, height > 0, CGFloat(max(width, height)) <= maxAssetSide, UIImage(data: data) != nil {
+            return data
         }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -204,7 +208,12 @@ extension KalgramBadgeStore {
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
             return nil
         }
-        return UIImage(cgImage: image).pngData()
+        let result = UIImage(cgImage: image)
+        let alpha = image.alphaInfo
+        if alpha == .none || alpha == .noneSkipFirst || alpha == .noneSkipLast {
+            return result.jpegData(compressionQuality: 0.92)
+        }
+        return result.pngData()
     }
 
     // Counted in scalars: one character can carry any number of combining marks
@@ -226,6 +235,13 @@ extension KalgramBadgeStore {
         file.assets = assets
         file.document.name = KalgramBadgeStore.capped(file.document.name)
         file.document.cornerRadius = max(0.0, min(11.0, file.document.cornerRadius))
+        file.document.backgroundScale = max(0.05, min(10.0, file.document.backgroundScale))
+        file.document.backgroundOffset = file.document.backgroundOffset.prefix(2).map { max(-200.0, min(200.0, $0)) }
+        file.document.borderWidth = max(0.0, min(11.0, file.document.borderWidth))
+        if case var .gradient(gradient) = file.document.background {
+            gradient.colors = Array(gradient.colors.prefix(8))
+            file.document.background = .gradient(gradient)
+        }
         file.document.layers = file.document.layers.prefix(16).map { layer in
             var layer = layer
             layer.scale = max(0.05, min(8.0, layer.scale))
@@ -235,6 +251,7 @@ extension KalgramBadgeStore {
                 text.fontSize = max(1.0, min(40.0, text.fontSize))
                 text.strokeWidth = max(0.0, min(10.0, text.strokeWidth))
                 text.tracking = max(-10.0, min(20.0, text.tracking))
+                text.shadowRadius = max(0.0, min(20.0, text.shadowRadius))
                 layer.content = .text(text)
             }
             return layer
@@ -249,6 +266,7 @@ public final class KalgramImagePicker: NSObject, UIImagePickerControllerDelegate
 
     private var maxSide: CGFloat = 600.0
     private var onPicked: ((UIImage) -> Void)?
+    private var onPickedOriginal: ((Data) -> Void)?
 
     public static func downscaled(_ image: UIImage, maxSide: CGFloat) -> UIImage {
         let scale = min(1.0, maxSide / max(image.size.width, image.size.height))
@@ -275,11 +293,23 @@ public final class KalgramImagePicker: NSObject, UIImagePickerControllerDelegate
     }
 
     public func pick(maxSide: CGFloat, completion: @escaping (UIImage) -> Void) {
+        self.maxSide = maxSide
+        self.onPicked = completion
+        self.onPickedOriginal = nil
+        self.present()
+    }
+
+    // The photo's own file, at its own resolution (shrunk only past KalgramBadgeStore.maxAssetSide)
+    public func pickOriginal(completion: @escaping (Data) -> Void) {
+        self.onPicked = nil
+        self.onPickedOriginal = completion
+        self.present()
+    }
+
+    private func present() {
         guard let top = KalgramImagePicker.topViewController() else {
             return
         }
-        self.maxSide = maxSide
-        self.onPicked = completion
         let picker = UIImagePickerController()
         picker.sourceType = .photoLibrary
         picker.mediaTypes = ["public.image"]
@@ -289,14 +319,23 @@ public final class KalgramImagePicker: NSObject, UIImagePickerControllerDelegate
 
     public func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         picker.dismiss(animated: true)
-        if let image = info[.originalImage] as? UIImage {
+        if let onPickedOriginal = self.onPickedOriginal {
+            let fileData = (info[.imageURL] as? URL).flatMap { try? Data(contentsOf: $0) }
+            if let fileData, let data = KalgramBadgeStore.thumbnailPNG(fileData) {
+                onPickedOriginal(data)
+            } else if let image = info[.originalImage] as? UIImage, let data = KalgramImagePicker.downscaled(image, maxSide: KalgramBadgeStore.maxAssetSide).jpegData(compressionQuality: 0.92) {
+                onPickedOriginal(data)
+            }
+        } else if let image = info[.originalImage] as? UIImage {
             self.onPicked?(KalgramImagePicker.downscaled(image, maxSide: self.maxSide))
         }
         self.onPicked = nil
+        self.onPickedOriginal = nil
     }
 
     public func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         picker.dismiss(animated: true)
         self.onPicked = nil
+        self.onPickedOriginal = nil
     }
 }
