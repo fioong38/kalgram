@@ -10,10 +10,10 @@ class WallpaperNYNode: ASDisplayNode {
     // kalgram: bubbles rise from the bottom edge instead of falling from the top
     private var rising = false
     // kalgram: an NYStyle raw value, the chat's own or kalgram Pro's
-    private let style: String
+    private let effectStyle: String
 
     init(style: String) {
-        self.style = style
+        self.effectStyle = style
         super.init()
     }
 
@@ -44,7 +44,7 @@ class WallpaperNYNode: ASDisplayNode {
             let pictureSpin = (KalgramEffectSettings.percent(KalgramEffectSettings.spinKey, default: 50.0) - 50.0) / 50.0 * (Double.pi / 2.0)
             let pictureSpinRange = KalgramEffectSettings.percent(KalgramEffectSettings.spinSpreadKey, default: 22.0) / 100.0 * Double.pi
 
-            let style = self.style
+            let style = self.effectStyle
             var pictures: [UIImage] = []
             if style == SGSimpleSettings.NYStyle.custom.rawValue {
                 // kalgram: the user's pictures, each one a cell of its own
@@ -131,7 +131,7 @@ class WallpaperNYNode: ASDisplayNode {
 
         if let emitterLayer = self.emitterLayer {
             var emitterWidthK: CGFloat = 1.5
-            switch self.style {
+            switch self.effectStyle {
                 case SGSimpleSettings.NYStyle.lightning.rawValue:
                     emitterWidthK = 1.5
                 default:
