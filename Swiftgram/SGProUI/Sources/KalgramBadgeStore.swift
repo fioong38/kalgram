@@ -207,6 +207,13 @@ extension KalgramBadgeStore {
         return UIImage(cgImage: image).pngData()
     }
 
+    // Counted in scalars: one character can carry any number of combining marks
+    private static func capped(_ string: String) -> String {
+        var scalars = String.UnicodeScalarView()
+        scalars.append(contentsOf: string.unicodeScalars.prefix(128))
+        return String(scalars)
+    }
+
     // Shrinks pictures and clamps every number the renderer draws with
     static func sanitized(_ file: KalgramBadgeFile) -> KalgramBadgeFile {
         var file = file
@@ -217,14 +224,14 @@ extension KalgramBadgeStore {
             }
         }
         file.assets = assets
-        file.document.name = String(file.document.name.prefix(64))
+        file.document.name = KalgramBadgeStore.capped(file.document.name)
         file.document.cornerRadius = max(0.0, min(11.0, file.document.cornerRadius))
         file.document.layers = file.document.layers.prefix(16).map { layer in
             var layer = layer
             layer.scale = max(0.05, min(8.0, layer.scale))
             layer.offset = layer.offset.prefix(2).map { max(-200.0, min(200.0, $0)) }
             if case var .text(text) = layer.content {
-                text.string = String(text.string.prefix(64))
+                text.string = KalgramBadgeStore.capped(text.string)
                 text.fontSize = max(1.0, min(40.0, text.fontSize))
                 text.strokeWidth = max(0.0, min(10.0, text.strokeWidth))
                 text.tracking = max(-10.0, min(20.0, text.tracking))
