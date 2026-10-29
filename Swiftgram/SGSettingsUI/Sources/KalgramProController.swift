@@ -20,6 +20,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case ghostPermanent
     case history
     case protection
+    case background
     case notifications
     case island
     case islandSize
@@ -59,6 +60,7 @@ private enum KalgramProSlider: String {
 
 private enum KalgramProSelector: String {
     case effectStyle
+    case backgroundMode
 }
 
 private enum KalgramProLink: String {
@@ -85,6 +87,17 @@ private let effectSpeedKey = "kalgram.effect.speed"
 
 private var effectImageURL: URL? {
     return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("kalgram-particle.png")
+}
+
+private func backgroundModeTitle(_ mode: KalgramTweaks.BackgroundMode) -> String {
+    switch mode {
+    case .off:
+        return "Выключено"
+    case .refresh:
+        return "Фоновое обновление iOS"
+    case .alwaysOn:
+        return "Постоянно (как Ghostgram)"
+    }
 }
 
 private func effectStyleTitle(_ style: String) -> String {
@@ -130,6 +143,20 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .protection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
     entries.append(.toggle(id: id.count, section: .protection, settingName: .bypassIosRestrictions, value: KalgramTweaks.bypassIosRestrictions, text: "Открывать каналы, скрытые на iOS", enabled: true))
     entries.append(.notice(id: id.count, section: .protection, text: "Одноразки не исчезают, и отправитель не видит, что ты открыл. Отметить просмотренной: долгий тап по сообщению → «🔥 Сжечь». Каналы с пометкой «нарушал правила App Store» открываются; блокировки по закону остаются."))
+
+    let backgroundMode = KalgramTweaks.backgroundMode
+    entries.append(.header(id: id.count, section: .background, text: "УВЕДОМЛЕНИЯ С ТЕКСТОМ", badge: nil))
+    entries.append(.oneFromManySelector(id: id.count, section: .background, settingName: .backgroundMode, text: "Режим", value: backgroundModeTitle(backgroundMode), enabled: true))
+    let backgroundNotice: String
+    switch backgroundMode {
+    case .off:
+        backgroundNotice = "kalgram получает сообщения, только когда открыт. Включи один из режимов, чтобы приходили уведомления с текстом."
+    case .refresh:
+        backgroundNotice = "iOS сама иногда будит kalgram, он скачивает новое и показывает уведомления с текстом. Батарею почти не тратит, но когда будить, решает iOS: бывает раз в 15–30 минут, бывает раз в несколько часов, ночью и в энергосбережении почти никогда."
+    case .alwaysOn:
+        backgroundNotice = "kalgram не засыпает в фоне (играет беззвучный звук, музыке не мешает), сообщения приходят сразу. Тратит батарею — проверь в Настройки → Аккумулятор. Сам выключается в режиме энергосбережения и при заряде ниже 20% без зарядки. Если смахнуть kalgram из многозадачности, уведомления прекратятся до следующего открытия."
+    }
+    entries.append(.notice(id: id.count, section: .background, text: backgroundNotice))
 
     entries.append(.header(id: id.count, section: .notifications, text: "УВЕДОМЛЕНИЯ (NTFY)", badge: nil))
     entries.append(.disclosure(id: id.count, section: .notifications, link: .ntfyCopyTopic, text: "Скопировать топик"))
@@ -273,6 +300,23 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                             return
                         }
                         SGSimpleSettings.shared.nyStyle = style.rawValue
+                        reloadPromise.set(true)
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .backgroundMode:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for mode in KalgramTweaks.BackgroundMode.allCases {
+                    items.append(ActionSheetButtonItem(title: backgroundModeTitle(mode), color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        KalgramTweaks.backgroundMode = mode
                         reloadPromise.set(true)
                     }))
                 }

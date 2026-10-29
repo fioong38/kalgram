@@ -1724,6 +1724,42 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
             }
             
+            // kalgram: iOS background refresh, fetches new messages and shows them as notifications
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: "\(baseAppBundleId).refresh", using: DispatchQueue.main) { task in
+                kalgramScheduleBackgroundRefresh()
+                if KalgramTweaks.backgroundMode == .off {
+                    task.setTaskCompleted(success: true)
+                    return
+                }
+                var isCompleted = false
+                let complete: () -> Void = {
+                    if !isCompleted {
+                        isCompleted = true
+                        task.setTaskCompleted(success: true)
+                    }
+                }
+                task.expirationHandler = {
+                    Queue.mainQueue().async {
+                        complete()
+                    }
+                }
+                let _ = (self.sharedContextPromise.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                    sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
+                        complete()
+                    }, timeout: 25.0)
+                    let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _, contexts, _ in
+                        for (_, context, _) in contexts {
+                            sharedApplicationContext.notificationManager.beginPollingState(account: context.account)
+                        }
+                    })
+                })
+            }
+            kalgramScheduleBackgroundRefresh()
+
             BGTaskScheduler.shared.getPendingTaskRequests(completionHandler: { tasks in
                 if tasks.contains(where: { $0.identifier == cleanupTaskId }) {
                     Logger.shared.log("App \(self.episodeId)", "Already have a cleanup task pending")

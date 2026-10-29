@@ -323,6 +323,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
+    private var kalgramBackgroundNotifier: KalgramBackgroundNotifier? // kalgram
     
     private weak var appDelegate: AppDelegate?
     
@@ -1113,6 +1114,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         // kalgram: long press on the chat list ghost button opens kalgram Pro
         kalgramMakeGhostSettingsController = { context in
             return kalgramProController(context: context)
+        }
+        // kalgram: notifications for messages that arrive while the app runs in the background
+        if applicationBindings.isMainApp {
+            self.kalgramBackgroundNotifier = KalgramBackgroundNotifier(sharedContext: self)
         }
         // kalgram: the picture around the Dynamic Island, once the main window is up
         if applicationBindings.isMainApp {

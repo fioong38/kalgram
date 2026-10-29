@@ -69,6 +69,32 @@ public enum KalgramTweaks {
         }
     }
 
+    // How kalgram gets new messages while it is in the background (a sideloaded
+    // build receives no pushes from Telegram):
+    // - off: only when opened (and ntfy wake-ups, if set up);
+    // - refresh: iOS wakes the app now and then (it decides when, from minutes to
+    //   hours), the app fetches what is new and shows notifications;
+    // - alwaysOn: a silent sound keeps the app running, messages arrive at once.
+    //   Costs battery; stops by itself in Low Power Mode and below 20% charge.
+    public enum BackgroundMode: String, CaseIterable {
+        case off
+        case refresh
+        case alwaysOn
+    }
+
+    public static let backgroundModeKey = "kalgram.background.mode"
+    public static let backgroundModeDidChangeNotification = Notification.Name("KalgramBackgroundModeDidChange")
+
+    public static var backgroundMode: BackgroundMode {
+        get {
+            return UserDefaults.standard.string(forKey: backgroundModeKey).flatMap(BackgroundMode.init(rawValue:)) ?? .off
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: backgroundModeKey)
+            NotificationCenter.default.post(name: backgroundModeDidChangeNotification, object: nil)
+        }
+    }
+
     public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
 
     public static var keepSelfDestructing: Bool {

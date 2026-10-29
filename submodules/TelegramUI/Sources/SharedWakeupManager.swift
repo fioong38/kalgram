@@ -1097,8 +1097,22 @@ public final class SharedWakeupManager {
             }
         }
         
+        // kalgram: "always on" background mode keeps the app running with a silent sound,
+        // unless the app's own audio or a call already does, or the battery is low
+        let keepAlive = KalgramKeepAlive.shared
+        if keepAlive.conditionsChanged == nil {
+            keepAlive.conditionsChanged = { [weak self] in
+                self?.checkTasks()
+            }
+        }
+        if KalgramTweaks.backgroundMode == .alwaysOn && !self.inForeground && !self.hasActiveAudioSession && !hasActiveCalls && keepAlive.isAllowed {
+            keepAlive.start()
+        } else {
+            keepAlive.stop(releaseSession: !self.hasActiveAudioSession && !hasActiveCalls)
+        }
+
         self.updateAccounts(hasTasks: hasTasksForBackgroundExtension, endTaskAfterTransactionsComplete: endTaskAfterTransactionsComplete)
-        
+
         /*if !self.inForeground && pendingMessageCount != 0 && !self.hasActiveAudioSession {
             if self.silenceAudioRenderer == nil {
                 let audioSession = AVAudioSession()
@@ -1135,13 +1149,14 @@ public final class SharedWakeupManager {
     private func updateAccounts(hasTasks: Bool, endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?) {
         let hasBackgroundLocationTask = self.accountsAndTasks.contains(where: { $0.2.backgroundLocation })
         
-        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.backgroundProcessingTaskId != nil || self.backgroundStoryProcessingTaskId != nil || hasBackgroundLocationTask || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil {
+        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.backgroundProcessingTaskId != nil || self.backgroundStoryProcessingTaskId != nil || hasBackgroundLocationTask || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil || KalgramKeepAlive.shared.isRunning {
             Logger.shared.log("Wakeup", "enableBeginTransactions: true (active)")
             
             for (account, primary, tasks) in self.accountsAndTasks {
                 account.postbox.setCanBeginTransactions(true)
                 
-                if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) {
+                // kalgram: kept alive in the background, every account stays connected to receive messages
+                if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) || KalgramKeepAlive.shared.isRunning {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                 } else {
                     account.shouldBeServiceTaskMaster.set(.single(.never))
