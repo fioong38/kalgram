@@ -28,12 +28,18 @@ final class KalgramProxyFailover {
     private var userDisabledProxy = false
     // The on/off state kalgram itself just asked for, so that change is not taken for the user's
     private var expectedEnabled: Bool?
+    private var settingsObserver: NSObjectProtocol?
 
     func start(sharedContext: SharedAccountContext) {
         guard self.sharedContext == nil else {
             return
         }
         self.sharedContext = sharedContext
+
+        // The kalgram Pro switches take effect at once, not at the next change of the connection
+        self.settingsObserver = NotificationCenter.default.addObserver(forName: KalgramProxySettings.changedNotification, object: nil, queue: .main, using: { [weak self] _ in
+            self?.reschedule()
+        })
 
         let proxySettings = sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
         |> map { sharedData -> ProxySettings in
@@ -96,7 +102,7 @@ final class KalgramProxyFailover {
         guard KalgramProxySettings.autoSwitch, let connectionStatus = self.connectionStatus else {
             return
         }
-        if KalgramProxySettings.isVpnActive() {
+        if KalgramProxySettings.shouldHoldBackForVpn() {
             if self.proxySettings.enabled && KalgramProxySettings.autoEnabled {
                 KalgramProxySettings.autoEnabled = false
                 self.apply { settings in
@@ -120,7 +126,7 @@ final class KalgramProxyFailover {
 
     private func timerFired() {
         self.timer = nil
-        guard KalgramProxySettings.autoSwitch, let connectionStatus = self.connectionStatus, case .connecting = connectionStatus, !KalgramProxySettings.isVpnActive() else {
+        guard KalgramProxySettings.autoSwitch, let connectionStatus = self.connectionStatus, case .connecting = connectionStatus, !KalgramProxySettings.shouldHoldBackForVpn() else {
             return
         }
         let servers = self.proxySettings.servers

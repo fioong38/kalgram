@@ -55,6 +55,7 @@ private enum KalgramProToggle: String {
     case effectRemoveBackground
     case studyEnabled
     case proxyAutoSwitch
+    case proxyRespectVpn
 }
 
 private enum KalgramProSlider: String {
@@ -247,7 +248,8 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
 
     entries.append(.header(id: id.count, section: .proxy, text: "ПРОКСИ", badge: nil))
     entries.append(.toggle(id: id.count, section: .proxy, settingName: .proxyAutoSwitch, value: KalgramProxySettings.autoSwitch, text: "Автосмена прокси", enabled: true))
-    entries.append(.notice(id: id.count, section: .proxy, text: "Если прокси не подключается 10 секунд, kalgram переключит на следующий из сохранённых. Если прокси выключен, а связи нет 15 секунд, включит первый. Пока включён VPN, kalgram сам прокси не включает и не переключает, а включённый им самим выключает. Вручную включать можно всегда."))
+    entries.append(.toggle(id: id.count, section: .proxy, settingName: .proxyRespectVpn, value: KalgramProxySettings.respectVpn, text: "Не включать при VPN", enabled: KalgramProxySettings.autoSwitch))
+    entries.append(.notice(id: id.count, section: .proxy, text: "Автосмена: если прокси не подключается 10 секунд, kalgram переключит на следующий из сохранённых, а если прокси выключен и связи нет 15 секунд — включит первый. Работает только когда со связью беда, в остальное время ничего не делает.\n«Не включать при VPN»: пока включён VPN, kalgram сам прокси не включает и не переключает, а включённый им самим выключает. Вручную включать можно всегда."))
 
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .oldInterface, value: UserDefaults.standard.bool(forKey: oldInterfaceKey), text: "Старый интерфейс", enabled: true))
@@ -329,6 +331,8 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramStudySettings.isEnabled = value
             case .proxyAutoSwitch:
                 KalgramProxySettings.autoSwitch = value
+            case .proxyRespectVpn:
+                KalgramProxySettings.respectVpn = value
             }
             reloadPromise.set(true)
         },

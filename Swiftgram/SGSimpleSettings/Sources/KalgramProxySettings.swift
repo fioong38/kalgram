@@ -7,13 +7,34 @@ public enum KalgramProxySettings {
     // Set while a proxy is on because kalgram turned it on, not the user
     public static let autoEnabledKey = "kalgram.proxy.autoEnabled"
 
+    public static let respectVpnKey = "kalgram.proxy.respectVpn"
+    public static let changedNotification = Notification.Name("KalgramProxySettingsChanged")
+
+    // Off until the user turns it on
     public static var autoSwitch: Bool {
         get {
-            return UserDefaults.standard.object(forKey: autoSwitchKey) as? Bool ?? true
+            return UserDefaults.standard.bool(forKey: autoSwitchKey)
         }
         set {
             UserDefaults.standard.set(newValue, forKey: autoSwitchKey)
+            NotificationCenter.default.post(name: changedNotification, object: nil)
         }
+    }
+
+    // With a VPN on, kalgram turns no proxy on by itself and switches none. On by default.
+    public static var respectVpn: Bool {
+        get {
+            return UserDefaults.standard.object(forKey: respectVpnKey) as? Bool ?? true
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: respectVpnKey)
+            NotificationCenter.default.post(name: changedNotification, object: nil)
+        }
+    }
+
+    // A VPN that kalgram should hold back for: on, and the user wants it respected
+    public static func shouldHoldBackForVpn() -> Bool {
+        return respectVpn && isVpnActive()
     }
 
     public static var autoEnabled: Bool {
