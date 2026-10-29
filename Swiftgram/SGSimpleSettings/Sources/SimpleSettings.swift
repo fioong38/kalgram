@@ -179,15 +179,12 @@ public class SGSimpleSettings {
         case sendWithReturnKey
         case videoControlsInFooter
         case hideAccountInNotifications
-<<<<<<< HEAD
         // kalgram: ad blocking, all client-side, default on
         case kalgramHideSponsored
         case kalgramHideSimilarChannels
         case kalgramHideSearchAds
         case kalgramHidePremiumPromo
-=======
         case roundVideoQuality
->>>>>>> refs/heads/worktree-agent-a9875f97ec1561e7e
     }
 
     // Output size and bitrate of round video messages recorded with the modern camera.
@@ -362,14 +359,11 @@ public class SGSimpleSettings {
         Keys.status.rawValue: 1,
         Keys.showRepostToStoryV2.rawValue: true,
         Keys.hideAccountInNotifications.rawValue: false,
-<<<<<<< HEAD
         Keys.kalgramHideSponsored.rawValue: true,
         Keys.kalgramHideSimilarChannels.rawValue: true,
         Keys.kalgramHideSearchAds.rawValue: true,
         Keys.kalgramHidePremiumPromo.rawValue: true,
-=======
         Keys.roundVideoQuality.rawValue: RoundVideoQualityValues.standard.rawValue,
->>>>>>> refs/heads/worktree-agent-a9875f97ec1561e7e
     ]
     
     @UserDefault(key: Keys.hidePhoneInSettings.rawValue)
@@ -649,7 +643,6 @@ public class SGSimpleSettings {
     @UserDefault(key: Keys.hideAccountInNotifications.rawValue, userDefaults: UserDefaults(suiteName: APP_GROUP_IDENTIFIER) ?? .standard)
     public var hideAccountInNotifications: Bool
 
-<<<<<<< HEAD
     // kalgram: ad blocking
     @UserDefault(key: Keys.kalgramHideSponsored.rawValue)
     public var kalgramHideSponsored: Bool
@@ -662,10 +655,8 @@ public class SGSimpleSettings {
 
     @UserDefault(key: Keys.kalgramHidePremiumPromo.rawValue)
     public var kalgramHidePremiumPromo: Bool
-=======
     @UserDefault(key: Keys.roundVideoQuality.rawValue)
     public var roundVideoQuality: String
->>>>>>> refs/heads/worktree-agent-a9875f97ec1561e7e
 }
 
 extension SGSimpleSettings {
