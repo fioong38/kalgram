@@ -261,6 +261,8 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     var rotation: CGFloat { get set }
     var contentStats: WallpaperContentStats? { get }
     var contentStatsUpdated: (() -> Void)? { get set }
+    // kalgram: the chat whose own falling effect this background shows, nil for kalgram Pro's
+    var kalgramEffectPeerId: Int64? { get set }
 
     func update(wallpaper: TelegramWallpaper, animated: Bool)
     func update(wallpaper: TelegramWallpaper, starGift: StarGift?, animated: Bool)
@@ -1186,6 +1188,45 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
     // MARK: Swiftgram
     private var NYNode: WallpaperNYNode?
     //
+    // kalgram: the chat's own falling effect. Changing it, or that chat's style, rebuilds the effect.
+    private var kalgramEffectObserver: NSObjectProtocol?
+    private var kalgramEffectSize: CGSize?
+    public var kalgramEffectPeerId: Int64? {
+        didSet {
+            if self.kalgramEffectObserver == nil && self.kalgramEffectPeerId != nil {
+                self.kalgramEffectObserver = NotificationCenter.default.addObserver(forName: KalgramEffectSettings.chatStyleChangedNotification, object: nil, queue: .main, using: { [weak self] notification in
+                    guard let self, let peerId = (notification.object as? NSNumber)?.int64Value, peerId == self.kalgramEffectPeerId else {
+                        return
+                    }
+                    self.kalgramRebuildEffect()
+                })
+            }
+            if oldValue != self.kalgramEffectPeerId {
+                self.kalgramRebuildEffect()
+            }
+        }
+    }
+
+    // Before the first layout there is nothing to rebuild: the layout creates the effect itself
+    private func kalgramRebuildEffect() {
+        guard let size = self.kalgramEffectSize else {
+            return
+        }
+        self.NYNode?.removeFromSupernode()
+        self.NYNode = nil
+        self.kalgramInstallEffectIfNeeded(size: size)
+    }
+
+    private func kalgramInstallEffectIfNeeded(size: CGSize) {
+        let style = KalgramEffectSettings.effectiveStyle(peerId: self.kalgramEffectPeerId)
+        if style != SGSimpleSettings.NYStyle.default.rawValue && self.NYNode == nil {
+            let nYNode = WallpaperNYNode(style: style)
+            self.addSubnode(nYNode)
+            self.NYNode = nYNode
+            nYNode.frame = CGRect(origin: CGPoint(), size: size)
+            nYNode.updateLayout(size: size)
+        }
+    }
 
     private var imageContentMode: UIView.ContentMode {
         didSet {
@@ -1268,6 +1309,9 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
         self.patternImageDisposable.dispose()
         self.wallpaperDisposable.dispose()
         self.imageDisposable.dispose()
+        if let kalgramEffectObserver = self.kalgramEffectObserver {
+            NotificationCenter.default.removeObserver(kalgramEffectObserver)
+        }
     }
     
     private func updateDimming() {
@@ -1866,9 +1910,9 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                 
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
-            /* MARK: Swiftgram */ if SGSimpleSettings.shared.isNYEnabled && self.NYNode == nil { let nYNode = WallpaperNYNode(); self.addSubnode(nYNode); self.NYNode = nYNode }
+            /* MARK: Swiftgram */ self.kalgramInstallEffectIfNeeded(size: size)
         }
-        /* MARK: Swiftgram */ self.NYNode?.frame = CGRect(origin: CGPoint(), size: size); self.NYNode?.updateLayout(size: size)
+        /* MARK: Swiftgram */ self.kalgramEffectSize = size; self.NYNode?.frame = CGRect(origin: CGPoint(), size: size); self.NYNode?.updateLayout(size: size)
     }
 
     private var isAnimating = false

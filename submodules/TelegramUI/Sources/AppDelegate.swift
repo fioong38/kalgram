@@ -1330,7 +1330,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             
             return .single(sharedApplicationContext)
         })
-            
+
+        // kalgram: «Подготовка», the study reminder (kalgram Pro)
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { sharedApplicationContext in
+            KalgramStudyReminder.shared.start(sharedContext: sharedApplicationContext.sharedContext)
+        })
+
         self.context.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext?, NoError> in

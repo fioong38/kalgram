@@ -1,3 +1,4 @@
+import SGSimpleSettings // MARK: Swiftgram
 import Foundation
 import UIKit
 import Display
@@ -486,6 +487,41 @@ extension PeerInfoScreenNode {
                             f(.dismissWithoutContent)
                             
                             self?.openChatForThemeChange()
+                        })))
+
+                        // kalgram: this chat's own falling effect, over kalgram Pro's
+                        let kalgramEffectPeerId = user.id.toInt64()
+                        items.append(.action(ContextMenuActionItem(text: "Снег в этом чате", icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
+                        }, action: { c, _ in
+                            let current = KalgramEffectSettings.chatStyle(peerId: kalgramEffectPeerId)
+                            let options: [(style: String?, title: String)] = [
+                                (nil, "Как везде"),
+                                (SGSimpleSettings.NYStyle.default.rawValue, "Выключен"),
+                                (SGSimpleSettings.NYStyle.snow.rawValue, "❄️ Снег"),
+                                (SGSimpleSettings.NYStyle.lightning.rawValue, "⚡️ Молнии"),
+                                (SGSimpleSettings.NYStyle.custom.rawValue, "🖼 Свои картинки")
+                            ]
+                            var subItems: [ContextMenuItem] = []
+                            subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                            }, iconPosition: .left, action: { c, _ in
+                                c?.popItems()
+                            })))
+                            subItems.append(.separator)
+                            for option in options {
+                                subItems.append(.action(ContextMenuActionItem(text: option.title, icon: { theme in
+                                    if option.style == current {
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                                    } else {
+                                        return nil
+                                    }
+                                }, action: { _, f in
+                                    f(.default)
+                                    KalgramEffectSettings.setChatStyle(option.style, peerId: kalgramEffectPeerId)
+                                })))
+                            }
+                            c?.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
                         })))
                     }
                                         

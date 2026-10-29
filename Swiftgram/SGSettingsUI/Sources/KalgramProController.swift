@@ -26,6 +26,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case badges
     case effects
     case roundVideo
+    case study
     case interface
     case ads
 }
@@ -51,6 +52,7 @@ private enum KalgramProToggle: String {
     case adsHideSearchAds
     case adsHidePremiumPromo
     case effectRemoveBackground
+    case studyEnabled
 }
 
 private enum KalgramProSlider: String {
@@ -68,6 +70,7 @@ private enum KalgramProSelector: String {
     case effectDirection
     case backgroundMode
     case roundVideoQuality
+    case studyInterval
 }
 
 private enum KalgramProLink: String {
@@ -229,11 +232,16 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSpinSpread, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.spinSpreadKey, default: 22.0))))
     entries.append(.header(id: id.count, section: .effects, text: "ПРОЗРАЧНОСТЬ", badge: nil))
     entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectOpacity, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.opacityKey, default: 100.0))))
-    entries.append(.notice(id: id.count, section: .effects, text: "Меняется в чатах, открытых после настройки. В режиме энергосбережения эффект выключается сам."))
+    entries.append(.notice(id: id.count, section: .effects, text: "Меняется в чатах, открытых после настройки. Для одного чата можно выбрать свой: профиль собеседника → «…» → «Снег в этом чате». В режиме энергосбережения эффект выключается сам."))
 
     entries.append(.header(id: id.count, section: .roundVideo, text: "КРУЖКИ", badge: nil))
     entries.append(.oneFromManySelector(id: id.count, section: .roundVideo, settingName: .roundVideoQuality, text: "Качество", value: roundVideoQualityTitle(SGSimpleSettings.shared.roundVideoQuality), enabled: true))
     entries.append(.notice(id: id.count, section: .roundVideo, text: "Действует на кружки, записанные после изменения. Чем выше качество, тем чётче картинка, но файл больше и отправляется дольше. Уже отправленные не меняются."))
+
+    entries.append(.header(id: id.count, section: .study, text: "📚 ПОДГОТОВКА", badge: nil))
+    entries.append(.toggle(id: id.count, section: .study, settingName: .studyEnabled, value: KalgramStudySettings.isEnabled, text: "Напоминать учиться", enabled: true))
+    entries.append(.oneFromManySelector(id: id.count, section: .study, settingName: .studyInterval, text: "Каждые", value: "\(KalgramStudySettings.minutes) мин", enabled: KalgramStudySettings.isEnabled))
+    entries.append(.notice(id: id.count, section: .study, text: "Считается только время, пока kalgram открыт. Когда наберётся выбранное время, сверху появится плашка: «Хватит сидеть — иди занимайся». Свёрнутое приложение не считается и батарею не тратит."))
 
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .oldInterface, value: UserDefaults.standard.bool(forKey: oldInterfaceKey), text: "Старый интерфейс", enabled: true))
@@ -311,6 +319,8 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 SGSimpleSettings.shared.kalgramHidePremiumPromo = value
             case .effectRemoveBackground:
                 KalgramEffectSettings.removeBackground = value
+            case .studyEnabled:
+                KalgramStudySettings.isEnabled = value
             }
             reloadPromise.set(true)
         },
@@ -365,6 +375,23 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     items.append(ActionSheetButtonItem(title: effectDirectionTitle(direction), color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         KalgramEffectSettings.direction = direction
+                        reloadPromise.set(true)
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .studyInterval:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for minutes in KalgramStudySettings.minuteChoices {
+                    items.append(ActionSheetButtonItem(title: "\(minutes) мин", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        KalgramStudySettings.minutes = minutes
                         reloadPromise.set(true)
                     }))
                 }

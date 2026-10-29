@@ -109,3 +109,32 @@ public enum KalgramEffectSettings {
         try? FileManager.default.moveItem(at: legacy, to: first)
     }
 }
+
+// kalgram: the falling effect of one chat, set from the profile's "..." menu. A chat without its own
+// style shows the one chosen in kalgram Pro.
+public extension KalgramEffectSettings {
+    static let chatStylesKey = "kalgram.effect.chatStyles"
+    // Posted with the chat's peer id (Int64) as the object when its style changes
+    static let chatStyleChangedNotification = Notification.Name("KalgramChatEffectStyleChanged")
+
+    // An NYStyle raw value ("default" turns the effect off in that chat), nil when the chat follows kalgram Pro
+    static func chatStyle(peerId: Int64) -> String? {
+        let styles = UserDefaults.standard.dictionary(forKey: chatStylesKey) as? [String: String]
+        return styles?[String(peerId)]
+    }
+
+    static func setChatStyle(_ style: String?, peerId: Int64) {
+        var styles = (UserDefaults.standard.dictionary(forKey: chatStylesKey) as? [String: String]) ?? [:]
+        styles[String(peerId)] = style
+        UserDefaults.standard.set(styles, forKey: chatStylesKey)
+        NotificationCenter.default.post(name: chatStyleChangedNotification, object: NSNumber(value: peerId))
+    }
+
+    // The style a chat shows: its own, or kalgram Pro's
+    static func effectiveStyle(peerId: Int64?) -> String {
+        if let peerId, let style = chatStyle(peerId: peerId) {
+            return style
+        }
+        return SGSimpleSettings.shared.nyStyle
+    }
+}

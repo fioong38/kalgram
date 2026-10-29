@@ -726,6 +726,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             break
         }
         self.chatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: useSharedAnimationPhase)
+        // kalgram: a chat can have a falling effect of its own (profile → "..." → «Снег в этом чате»)
+        self.chatBackgroundNode.kalgramEffectPeerId = chatLocation.peerId?.toInt64()
         self.wallpaperReady.set(self.chatBackgroundNode.isReady)
         
         var presentationData = context.sharedContext.currentPresentationData.with { $0 }
