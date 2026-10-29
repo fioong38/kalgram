@@ -1119,10 +1119,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         if applicationBindings.isMainApp {
             self.kalgramBackgroundNotifier = KalgramBackgroundNotifier(sharedContext: self)
         }
-        // kalgram: the picture around the Dynamic Island, once the main window is up
+        // kalgram: the badge picked in kalgram Pro, in place of the Dynamic Island on screenshots
         if applicationBindings.isMainApp {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                KalgramIsland.shared.update()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                KalgramBadgeStore.shared.apply(window: self?.mainWindow)
             }
         }
         

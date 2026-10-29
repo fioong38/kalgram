@@ -36,6 +36,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/PeerNameColorScreen",
         "//submodules/UndoUI:UndoUI",
         "//submodules/LocalizedPeerData:LocalizedPeerData",
+        "//Swiftgram/SGProUI:SGProUI",
     ],
     visibility = [
         "//visibility:public",

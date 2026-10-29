@@ -11,6 +11,7 @@ import LocalizedPeerData
 import UndoUI
 import SGItemListUI
 import SGSimpleSettings
+import SGProUI
 
 // kalgram: every setting of the mod, behind the "kalgram Pro" row in Settings.
 // Ghost mode is shown for the account the screen was opened from.
@@ -22,8 +23,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case protection
     case background
     case notifications
-    case island
-    case islandSize
+    case badges
     case effects
     case interface
 }
@@ -43,17 +43,10 @@ private enum KalgramProToggle: String {
     case bypassProtection
     case keepSelfDestructing
     case bypassIosRestrictions
-    case islandEnabled
-    case islandFitsWhole
     case oldInterface
 }
 
 private enum KalgramProSlider: String {
-    case islandWidth
-    case islandHeight
-    case islandTop
-    case islandOffsetX
-    case islandCorners
     case effectDensity
     case effectSpeed
 }
@@ -65,14 +58,13 @@ private enum KalgramProSelector: String {
 
 private enum KalgramProLink: String {
     case ntfyCopyTopic
-    case islandPickImage
+    case badges
     case effectPickImage
 }
 
 private enum KalgramProAction: Hashable {
     case ntfySendTest
     case ntfyCheckTelegram
-    case islandReset
 }
 
 private struct KalgramProState: Equatable {
@@ -168,25 +160,9 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     }
     entries.append(.notice(id: id.count, section: .notifications, text: notificationsNotice))
 
-    let island = KalgramIsland.shared
-    entries.append(.header(id: id.count, section: .island, text: "КАРТИНКА ВМЕСТО DYNAMIC ISLAND", badge: nil))
-    entries.append(.toggle(id: id.count, section: .island, settingName: .islandEnabled, value: island.isEnabled && island.hasImage, text: "Показывать", enabled: island.hasImage))
-    entries.append(.disclosure(id: id.count, section: .island, link: .islandPickImage, text: island.hasImage ? "Сменить картинку" : "Выбрать картинку"))
-    entries.append(.toggle(id: id.count, section: .island, settingName: .islandFitsWhole, value: island.fitsWhole, text: "Вписать картинку целиком", enabled: island.hasImage))
-    entries.append(.notice(id: id.count, section: .island, text: island.deviceHasIsland ? "Картинка рисуется ровно под островком: вживую её закрывает чёрный островок, а на скриншотах вместо него видна картинка, как логотип в приложении Озон. Если по краям что-то торчит — уменьши ширину и высоту ниже." : "На этом айфоне нет Dynamic Island."))
-
-    entries.append(.header(id: id.count, section: .islandSize, text: "ШИРИНА", badge: nil))
-    entries.append(.percentageSlider(id: id.count, section: .islandSize, settingName: .islandWidth, value: island.widthPercent))
-    entries.append(.header(id: id.count, section: .islandSize, text: "ВЫСОТА", badge: nil))
-    entries.append(.percentageSlider(id: id.count, section: .islandSize, settingName: .islandHeight, value: island.heightPercent))
-    entries.append(.header(id: id.count, section: .islandSize, text: "ОТСТУП СВЕРХУ", badge: nil))
-    entries.append(.percentageSlider(id: id.count, section: .islandSize, settingName: .islandTop, value: island.topPercent))
-    entries.append(.header(id: id.count, section: .islandSize, text: "СДВИГ ВЛЕВО / ВПРАВО", badge: nil))
-    entries.append(.percentageSlider(id: id.count, section: .islandSize, settingName: .islandOffsetX, value: island.offsetXPercent))
-    entries.append(.header(id: id.count, section: .islandSize, text: "СКРУГЛЕНИЕ", badge: nil))
-    entries.append(.percentageSlider(id: id.count, section: .islandSize, settingName: .islandCorners, value: island.cornerPercentValue))
-    entries.append(.action(id: id.count, section: .islandSize, actionType: .islandReset, text: "Подогнать под мой iPhone", kind: .generic))
-    entries.append(.notice(id: id.count, section: .islandSize, text: "Сейчас: \(island.frameDescription). Проверяй скриншотом."))
+    entries.append(.header(id: id.count, section: .badges, text: "БЕЙДЖИК ВМЕСТО DYNAMIC ISLAND", badge: nil))
+    entries.append(.disclosure(id: id.count, section: .badges, link: .badges, text: "Бейджики"))
+    entries.append(.notice(id: id.count, section: .badges, text: "Картинка или надпись на месте островка: видна на скриншотах, а вживую её закрывает островок. Свои бейджи, файлы .ggbadge из Ghostgram и картинки по ссылке."))
 
     let style = SGSimpleSettings.shared.nyStyle
     let hasEffectImage = effectImageURL.flatMap { FileManager.default.fileExists(atPath: $0.path) } ?? false
@@ -208,6 +184,7 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
 
 public func kalgramProController(context: AccountContext) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var askForRestart: (() -> Void)?
     var showToast: ((String) -> Void)?
 
@@ -256,10 +233,6 @@ public func kalgramProController(context: AccountContext) -> ViewController {
             case .bypassIosRestrictions:
                 KalgramTweaks.bypassIosRestrictions = value
                 askForRestart?()
-            case .islandEnabled:
-                KalgramIsland.shared.isEnabled = value
-            case .islandFitsWhole:
-                KalgramIsland.shared.fitsWhole = value
             case .oldInterface:
                 UserDefaults.standard.set(value, forKey: oldInterfaceKey)
                 askForRestart?()
@@ -268,16 +241,6 @@ public func kalgramProController(context: AccountContext) -> ViewController {
         },
         updateSliderValue: { setting, value in
             switch setting {
-            case .islandWidth:
-                KalgramIsland.shared.widthPercent = value
-            case .islandHeight:
-                KalgramIsland.shared.heightPercent = value
-            case .islandTop:
-                KalgramIsland.shared.topPercent = value
-            case .islandOffsetX:
-                KalgramIsland.shared.offsetXPercent = value
-            case .islandCorners:
-                KalgramIsland.shared.cornerPercentValue = value
             case .effectDensity:
                 UserDefaults.standard.set(Double(value), forKey: effectDensityKey)
             case .effectSpeed:
@@ -333,10 +296,8 @@ public func kalgramProController(context: AccountContext) -> ViewController {
             case .ntfyCopyTopic:
                 UIPasteboard.general.string = KalgramNtfy.topic
                 showToast?("Топик скопирован")
-            case .islandPickImage:
-                KalgramIsland.shared.pickImage(completion: {
-                    reloadPromise.set(true)
-                })
+            case .badges:
+                pushControllerImpl?(kalgramBadgesController(context: context))
             case .effectPickImage:
                 KalgramImagePicker.shared.pick(maxSide: 128.0, completion: { image in
                     if let url = effectImageURL {
@@ -378,9 +339,6 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                         return state
                     }
                 })
-            case .islandReset:
-                KalgramIsland.shared.resetToDevice()
-                reloadPromise.set(true)
             }
         }
     )
@@ -401,6 +359,9 @@ public func kalgramProController(context: AccountContext) -> ViewController {
     let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushControllerImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
     showToast = { [weak context] text in
         guard let context else {

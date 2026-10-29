@@ -474,7 +474,10 @@ public class Window1 {
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         self.badgeView = UIImageView()
-        if SGSimpleSettings.shared.status > 1, let image = UIImage(bundleImageName: SGSimpleSettings.shared.customAppBadge) {
+        // kalgram: the badge picked in kalgram Pro, rendered to a file at 3x
+        if let image = kalgramStoredBadgeImage() {
+            self.badgeView.image = image
+        } else if SGSimpleSettings.shared.status > 1, let image = UIImage(bundleImageName: SGSimpleSettings.shared.customAppBadge) {
             self.badgeView.image = image
         } else {
         self.badgeView.image = UIImage(bundleImageName: "Components/AppBadge")
@@ -906,6 +909,19 @@ public class Window1 {
         self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, scale: UIScreen.main.scale, statusBarHeight: self.statusBarHost?.statusBarFrame.height ?? 0.0, onScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
     }
 
+    // kalgram: the badge can be switched off in kalgram Pro
+    private var kalgramBadgeDisabled = UserDefaults.standard.bool(forKey: "kalgram.badge.disabled")
+
+    // kalgram: shows a newly picked badge at once
+    public func kalgramUpdateBadge(image: UIImage?, enabled: Bool) {
+        if let image {
+            self.badgeView.image = image
+            self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: self.deviceMetrics.sgAppBadgeOffset()), size: image.size)
+        }
+        self.kalgramBadgeDisabled = !enabled
+        self.updateBadgeVisibility()
+    }
+
     private var forceBadgeHidden = true
     public func setForceBadgeHidden(_ hidden: Bool) {
         guard hidden != self.forceBadgeHidden else {
@@ -930,10 +946,10 @@ public class Window1 {
     }
     
     private func updateBadgeVisibility() {
-        let badgeIsHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+        let badgeIsHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.kalgramBadgeDisabled || self.windowLayout.size.width > self.windowLayout.size.height
         if badgeIsHidden != self.badgeView.isHidden && !badgeIsHidden {
             Queue.mainQueue().after(0.4) {
-                let badgeShouldBeHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+                let badgeShouldBeHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.kalgramBadgeDisabled || self.windowLayout.size.width > self.windowLayout.size.height
                 if badgeShouldBeHidden == badgeIsHidden {
                     self.badgeView.isHidden = badgeIsHidden
                 }
@@ -1743,4 +1759,14 @@ private class CustomDimController: ViewController {
         
         
     }
+}
+
+// kalgram: the badge picked in kalgram Pro (KalgramBadges in SGProUI writes it)
+public let kalgramBadgeFileName = "kalgram-badge.png"
+
+func kalgramStoredBadgeImage() -> UIImage? {
+    guard let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent(kalgramBadgeFileName), let data = try? Data(contentsOf: url) else {
+        return nil
+    }
+    return UIImage(data: data, scale: 3.0)
 }
