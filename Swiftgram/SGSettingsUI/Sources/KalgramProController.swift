@@ -49,22 +49,30 @@ private enum KalgramProToggle: String {
     case adsHideSimilarChannels
     case adsHideSearchAds
     case adsHidePremiumPromo
+    case effectRemoveBackground
 }
 
 private enum KalgramProSlider: String {
     case effectDensity
     case effectSpeed
+    case effectSize
+    case effectSizeSpread
+    case effectSpin
+    case effectSpinSpread
+    case effectOpacity
 }
 
 private enum KalgramProSelector: String {
     case effectStyle
+    case effectDirection
     case backgroundMode
 }
 
 private enum KalgramProLink: String {
     case ntfyCopyTopic
     case badges
-    case effectPickImage
+    case effectAddImage
+    case effectRemoveImages
 }
 
 private enum KalgramProAction: Hashable {
@@ -79,12 +87,6 @@ private struct KalgramProState: Equatable {
 private typealias KalgramProEntry = SGItemListUIEntry<KalgramProSection, KalgramProToggle, KalgramProSlider, KalgramProSelector, KalgramProLink, KalgramProAction>
 
 private let oldInterfaceKey = "kalgram.oldInterface"
-private let effectDensityKey = "kalgram.effect.density"
-private let effectSpeedKey = "kalgram.effect.speed"
-
-private var effectImageURL: URL? {
-    return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("kalgram-particle.png")
-}
 
 private func backgroundModeTitle(_ mode: KalgramTweaks.BackgroundMode) -> String {
     switch mode {
@@ -107,6 +109,17 @@ private func effectStyleTitle(_ style: String) -> String {
         return "🖼 Своя картинка"
     default:
         return "Выключено"
+    }
+}
+
+private func effectDirectionTitle(_ direction: KalgramEffectSettings.Direction) -> String {
+    switch direction {
+    case .down:
+        return "Вниз, как снег"
+    case .up:
+        return "Вверх, пузырьки"
+    case .sway:
+        return "Качаясь, с ветром"
     }
 }
 
@@ -177,14 +190,32 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.notice(id: id.count, section: .badges, text: "Картинка или надпись на месте островка: видна на скриншотах, а вживую её закрывает островок. Свои бейджи, файлы .ggbadge из Ghostgram и картинки по ссылке."))
 
     let style = SGSimpleSettings.shared.nyStyle
-    let hasEffectImage = effectImageURL.flatMap { FileManager.default.fileExists(atPath: $0.path) } ?? false
+    let pictureCount = KalgramEffectSettings.pictureURLs().count
+    let maxPictures = KalgramEffectSettings.maxPictures
     entries.append(.header(id: id.count, section: .effects, text: "ПАДАЮЩИЙ ЭФФЕКТ В ЧАТАХ", badge: nil))
     entries.append(.oneFromManySelector(id: id.count, section: .effects, settingName: .effectStyle, text: "Что падает", value: effectStyleTitle(style), enabled: true))
-    entries.append(.disclosure(id: id.count, section: .effects, link: .effectPickImage, text: hasEffectImage ? "Сменить свою картинку" : "Выбрать свою картинку"))
+    entries.append(.oneFromManySelector(id: id.count, section: .effects, settingName: .effectDirection, text: "Куда", value: effectDirectionTitle(KalgramEffectSettings.direction), enabled: true))
+    entries.append(.header(id: id.count, section: .effects, text: "СВОЯ КАРТИНКА, ДО \(maxPictures)", badge: nil))
+    entries.append(.toggle(id: id.count, section: .effects, settingName: .effectRemoveBackground, value: KalgramEffectSettings.removeBackground, text: "Убрать фон", enabled: true))
+    entries.append(.disclosure(id: id.count, section: .effects, link: .effectAddImage, text: "Добавить картинку (\(pictureCount) из \(maxPictures))"))
+    if pictureCount > 0 {
+        entries.append(.disclosure(id: id.count, section: .effects, link: .effectRemoveImages, text: "Убрать все картинки"))
+    }
+    entries.append(.notice(id: id.count, section: .effects, text: "Фон убирается по контуру предмета, нужен iOS 17. Картинка обрезается по предмету и уменьшается до 128 px. Без фона остаётся как есть. Размер, разброс и вращение — для своей картинки."))
     entries.append(.header(id: id.count, section: .effects, text: "СКОЛЬКО", badge: nil))
-    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectDensity, value: Int32(UserDefaults.standard.object(forKey: effectDensityKey) as? Double ?? 30.0)))
+    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectDensity, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.densityKey, default: 30.0))))
     entries.append(.header(id: id.count, section: .effects, text: "СКОРОСТЬ", badge: nil))
-    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSpeed, value: Int32(UserDefaults.standard.object(forKey: effectSpeedKey) as? Double ?? 50.0)))
+    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSpeed, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.speedKey, default: 50.0))))
+    entries.append(.header(id: id.count, section: .effects, text: "РАЗМЕР", badge: nil))
+    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSize, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.sizeKey, default: 45.0))))
+    entries.append(.header(id: id.count, section: .effects, text: "РАЗБРОС РАЗМЕРА", badge: nil))
+    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSizeSpread, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.sizeSpreadKey, default: 35.0))))
+    entries.append(.header(id: id.count, section: .effects, text: "ВРАЩЕНИЕ, 50 — НЕ КРУТИТСЯ", badge: nil))
+    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSpin, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.spinKey, default: 50.0))))
+    entries.append(.header(id: id.count, section: .effects, text: "РАЗБРОС ВРАЩЕНИЯ", badge: nil))
+    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSpinSpread, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.spinSpreadKey, default: 22.0))))
+    entries.append(.header(id: id.count, section: .effects, text: "ПРОЗРАЧНОСТЬ", badge: nil))
+    entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectOpacity, value: Int32(KalgramEffectSettings.percent(KalgramEffectSettings.opacityKey, default: 100.0))))
     entries.append(.notice(id: id.count, section: .effects, text: "Меняется в чатах, открытых после настройки. В режиме энергосбережения эффект выключается сам."))
 
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
@@ -261,15 +292,27 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 SGSimpleSettings.shared.kalgramHideSearchAds = value
             case .adsHidePremiumPromo:
                 SGSimpleSettings.shared.kalgramHidePremiumPromo = value
+            case .effectRemoveBackground:
+                KalgramEffectSettings.removeBackground = value
             }
             reloadPromise.set(true)
         },
         updateSliderValue: { setting, value in
             switch setting {
             case .effectDensity:
-                UserDefaults.standard.set(Double(value), forKey: effectDensityKey)
+                KalgramEffectSettings.setPercent(KalgramEffectSettings.densityKey, Double(value))
             case .effectSpeed:
-                UserDefaults.standard.set(Double(value), forKey: effectSpeedKey)
+                KalgramEffectSettings.setPercent(KalgramEffectSettings.speedKey, Double(value))
+            case .effectSize:
+                KalgramEffectSettings.setPercent(KalgramEffectSettings.sizeKey, Double(value))
+            case .effectSizeSpread:
+                KalgramEffectSettings.setPercent(KalgramEffectSettings.sizeSpreadKey, Double(value))
+            case .effectSpin:
+                KalgramEffectSettings.setPercent(KalgramEffectSettings.spinKey, Double(value))
+            case .effectSpinSpread:
+                KalgramEffectSettings.setPercent(KalgramEffectSettings.spinSpreadKey, Double(value))
+            case .effectOpacity:
+                KalgramEffectSettings.setPercent(KalgramEffectSettings.opacityKey, Double(value))
             }
             reloadPromise.set(true)
         },
@@ -282,12 +325,29 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 for style in SGSimpleSettings.NYStyle.allCases {
                     items.append(ActionSheetButtonItem(title: effectStyleTitle(style.rawValue), color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        let hasImage = effectImageURL.flatMap { FileManager.default.fileExists(atPath: $0.path) } ?? false
+                        let hasImage = !KalgramEffectSettings.pictureURLs().isEmpty
                         if style == .custom && !hasImage {
                             showToast?("Сначала выбери свою картинку")
                             return
                         }
                         SGSimpleSettings.shared.nyStyle = style.rawValue
+                        reloadPromise.set(true)
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .effectDirection:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for direction in KalgramEffectSettings.Direction.allCases {
+                    items.append(ActionSheetButtonItem(title: effectDirectionTitle(direction), color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        KalgramEffectSettings.direction = direction
                         reloadPromise.set(true)
                     }))
                 }
@@ -323,14 +383,33 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 showToast?("Топик скопирован")
             case .badges:
                 pushControllerImpl?(kalgramBadgesController(context: context))
-            case .effectPickImage:
-                KalgramImagePicker.shared.pick(maxSide: 128.0, completion: { image in
-                    if let url = effectImageURL {
-                        try? image.pngData()?.write(to: url)
-                        SGSimpleSettings.shared.nyStyle = SGSimpleSettings.NYStyle.custom.rawValue
+            case .effectAddImage:
+                KalgramImagePicker.shared.pickOriginal(completion: { data in
+                    if KalgramEffectSettings.pictureURLs().count >= KalgramEffectSettings.maxPictures {
+                        showToast?("Картинок уже \(KalgramEffectSettings.maxPictures), больше не добавить")
+                        return
                     }
-                    reloadPromise.set(true)
+                    let removeBackground = KalgramEffectSettings.removeBackground
+                    // Finding the subject takes a moment, so it is not done on the main thread
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        let png = kalgramParticlePNG(from: data, removeBackground: removeBackground)
+                        DispatchQueue.main.async {
+                            if let png, KalgramEffectSettings.addPicture(png) {
+                                SGSimpleSettings.shared.nyStyle = SGSimpleSettings.NYStyle.custom.rawValue
+                            } else {
+                                showToast?("Не получилось прочитать картинку")
+                            }
+                            reloadPromise.set(true)
+                        }
+                    }
                 })
+            case .effectRemoveImages:
+                KalgramEffectSettings.removeAllPictures()
+                if SGSimpleSettings.shared.nyStyle == SGSimpleSettings.NYStyle.custom.rawValue {
+                    SGSimpleSettings.shared.nyStyle = SGSimpleSettings.NYStyle.default.rawValue
+                }
+                showToast?("Картинки убраны")
+                reloadPromise.set(true)
             }
         },
         action: { action in
