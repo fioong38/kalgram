@@ -175,7 +175,7 @@ public final class KalgramBadgeStore {
             self.save(file)
             return file
         }
-        if let png = KalgramBadgeStore.thumbnailPNG(data) {
+        if let png = KalgramBadgeStore.thumbnailPNG(data, maxSide: KalgramBadgeStore.maxImportedAssetSide, passThrough: false) {
             let assetId = UUID().uuidString
             let document = KalgramBadgeDocument(name: name, background: .image(KalgramBadgeImageRef(assetId: assetId)), layers: [])
             let file = KalgramBadgeFile(document: document, assets: [assetId: png])
@@ -191,19 +191,24 @@ extension KalgramBadgeStore {
     // A phone photo at full size, and no larger
     static let maxAssetSide: CGFloat = 4096.0
 
-    // The picture as it is when it fits maxAssetSide, else shrunk to it without decoding it at full size
-    static func thumbnailPNG(_ data: Data) -> Data? {
+    // Pictures inside a file that came from elsewhere: smaller, and at most this many
+    static let maxImportedAssetSide: CGFloat = 2048.0
+    static let maxImportedAssets = 4
+
+    // The picture as it is when it is a single image that fits maxSide, else shrunk to it without
+    // decoding it at full size. Only the user's own picks keep their bytes (passThrough).
+    static func thumbnailPNG(_ data: Data, maxSide: CGFloat = KalgramBadgeStore.maxAssetSide, passThrough: Bool = true) -> Data? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetCount(source) > 0 else {
             return nil
         }
-        if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any], let width = properties[kCGImagePropertyPixelWidth] as? Int, let height = properties[kCGImagePropertyPixelHeight] as? Int, width > 0, height > 0, CGFloat(max(width, height)) <= maxAssetSide, UIImage(data: data) != nil {
+        if passThrough, CGImageSourceGetCount(source) == 1, let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any], let width = properties[kCGImagePropertyPixelWidth] as? Int, let height = properties[kCGImagePropertyPixelHeight] as? Int, width > 0, height > 0, CGFloat(max(width, height)) <= maxSide, UIImage(data: data) != nil {
             return data
         }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxAssetSide
+            kCGImageSourceThumbnailMaxPixelSize: maxSide
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
             return nil
@@ -226,9 +231,19 @@ extension KalgramBadgeStore {
     // Shrinks pictures and clamps every number the renderer draws with
     static func sanitized(_ file: KalgramBadgeFile) -> KalgramBadgeFile {
         var file = file
+        // Only pictures the badge uses, re-encoded, so no file reaches the renderer as it came
+        var used: [String] = []
+        if case let .image(ref) = file.document.background {
+            used.append(ref.assetId)
+        }
+        for layer in file.document.layers {
+            if case let .image(ref) = layer.content, !used.contains(ref.assetId) {
+                used.append(ref.assetId)
+            }
+        }
         var assets: [String: Data] = [:]
-        for (id, data) in file.assets.prefix(16) {
-            if let png = thumbnailPNG(data) {
+        for id in used.prefix(maxImportedAssets) {
+            if let data = file.assets[id], let png = thumbnailPNG(data, maxSide: maxImportedAssetSide, passThrough: false) {
                 assets[id] = png
             }
         }
