@@ -973,7 +973,9 @@ public class VideoMessageCameraScreen: ViewController {
                 mode = .hdLanczos
             }
             if let mode {
-                self.cameraImpl = NeoCameraImpl(roundVideoMode: mode, log: { message in
+                // Kalgram: Settings > kalgram Pro > Round video quality. Read again at export (see roundVideoExportSettings).
+                let roundVideoQuality = RoundVideoQuality(rawValue: SGSimpleSettings.shared.roundVideoQuality) ?? .standard
+                self.cameraImpl = NeoCameraImpl(roundVideoMode: mode, roundVideoQuality: roundVideoQuality, log: { message in
                     Logger.shared.log("CameraNeo", message)
                 })
             } else {
@@ -2100,7 +2102,9 @@ public class VideoMessageCameraScreen: ViewController {
                     outputDimensions = video.dimensions
                 } else {
                     resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), paths: videoPaths, adjustments: resourceAdjustments)
-                    let exportConfiguration = recommendedVideoExportConfiguration(values: values, duration: duration, frameRate: 30.0)
+                    // The export never upscales past the recorded source, so the setting's ceiling is safe here.
+                    let roundVideoQuality = RoundVideoQuality(rawValue: SGSimpleSettings.shared.roundVideoQuality) ?? .standard
+                    let exportConfiguration = recommendedVideoExportConfiguration(values: values, duration: duration, frameRate: 30.0, videoMessageMaximumDimension: CGFloat(roundVideoQuality.maximumSide), videoMessageBitrateKbps: roundVideoQuality.videoBitrate / 1000)
                     outputDimensions = PixelDimensions(
                         width: Int32(exportConfiguration.videoSettings[AVVideoWidthKey] as? Int ?? Int(video.dimensions.width)),
                         height: Int32(exportConfiguration.videoSettings[AVVideoHeightKey] as? Int ?? Int(video.dimensions.height))

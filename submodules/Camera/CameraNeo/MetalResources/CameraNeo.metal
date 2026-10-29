@@ -217,25 +217,31 @@ kernel void compositeRoundVideo(
         uniforms
     );
     float3 darkenedBlur = blurred.sample(textureSampler, outputCoordinate).rgb * 0.25;
-    float circleMask = 1.0 - smoothstep(201.5, 202.5, distance(pixelCoordinate, outputSize * 0.5));
+    // The decoration sizes below were drawn for a 480 px frame. Scale them with the output
+    // so a larger round video keeps the same proportions (scale is 1 at 480).
+    float decorationScale = outputSize.x / 480.0;
+    float circleRadius = 202.0 * decorationScale;
+    float circleMask = 1.0 - smoothstep(circleRadius - 0.5, circleRadius + 0.5, distance(pixelCoordinate, outputSize * 0.5));
     float3 result = mix(darkenedBlur, sharp, circleMask);
 
-    constexpr float watermarkSize = 100.0;
+    float watermarkSize = 100.0 * decorationScale;
     float2 watermarkOrigin = outputSize - float2(watermarkSize);
     if (pixelCoordinate.x >= watermarkOrigin.x && pixelCoordinate.y >= watermarkOrigin.y) {
         float2 watermarkCoordinate = (pixelCoordinate - watermarkOrigin) / watermarkSize;
         result = sourceOver(watermark.sample(textureSampler, watermarkCoordinate), result);
     }
 
-    constexpr float planeSize = 68.0;
+    // Frame size of the atlas in its own pixels; the plane itself is drawn at decorationScale.
+    constexpr float atlasPlaneSize = 68.0;
+    float planeSize = atlasPlaneSize * decorationScale;
     float2 planeOrigin = float2(0.0, outputSize.y - planeSize);
     if (pixelCoordinate.x < planeSize && pixelCoordinate.y >= planeOrigin.y) {
         uint frameIndex = uint(uniforms.decoration.x + 0.5);
         uint columns = max(1u, uint(uniforms.decoration.y + 0.5));
         uint column = frameIndex % columns;
         uint row = frameIndex / columns;
-        float2 localCoordinate = pixelCoordinate - planeOrigin;
-        float2 atlasPixel = float2(float(column), float(row)) * planeSize + localCoordinate;
+        float2 localCoordinate = (pixelCoordinate - planeOrigin) / decorationScale;
+        float2 atlasPixel = float2(float(column), float(row)) * atlasPlaneSize + localCoordinate;
         float2 atlasCoordinate = atlasPixel / float2(planeAtlas.get_width(), planeAtlas.get_height());
         result = sourceOver(planeAtlas.sample(textureSampler, atlasCoordinate), result);
     }

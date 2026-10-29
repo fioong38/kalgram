@@ -41,6 +41,7 @@ final class VideoRecordingStatistics {
     let startedAt = CACurrentMediaTime()
     private let id = UUID().uuidString
     private let mode: NeoCameraImpl.RoundVideoMode
+    private let outputSide: Int
     private let usesMultiCam: Bool
     private let log: ((String) -> Void)?
     private let thermalStart = String(describing: ProcessInfo.processInfo.thermalState)
@@ -68,8 +69,9 @@ final class VideoRecordingStatistics {
     var gpu = Timing()
     var renderCallbackWall = Timing()
 
-    init(mode: NeoCameraImpl.RoundVideoMode, usesMultiCam: Bool, log: ((String) -> Void)?) {
+    init(mode: NeoCameraImpl.RoundVideoMode, outputSide: Int, usesMultiCam: Bool, log: ((String) -> Void)?) {
         self.mode = mode
+        self.outputSide = outputSide
         self.usesMultiCam = usesMultiCam
         self.log = log
     }
@@ -111,7 +113,7 @@ final class VideoRecordingStatistics {
         fields["device"] = String(describing: DeviceModel.current)
         fields["iOS"] = UIDevice.current.systemVersion
         fields["thermalStart"] = self.thermalStart
-        fields["output"] = "\(RoundVideoFrameProcessor.outputWidth)x\(RoundVideoFrameProcessor.outputHeight)"
+        fields["output"] = "\(self.outputSide)x\(self.outputSide)"
         fields["targetFps"] = roundVideoCaptureFrameRate
         fields["inputFormats"] = self.inputFormats.map { "\($0.position == Camera.Position.front.rawValue ? "front" : "back"):\($0.width)x\($0.height)" }.sorted()
         fields["receivedActiveFrames"] = self.activeFramesReceived
@@ -212,6 +214,7 @@ final class VideoRecorder {
 
     private let mediaQueue: DispatchQueue
     private let processor: RoundVideoFrameProcessor
+    private let quality: RoundVideoQuality
     private let statistics: VideoRecordingStatistics
     private let url: URL
     private let hasAudio: Bool
@@ -259,6 +262,7 @@ final class VideoRecorder {
         hasAudio: Bool,
         initialPosition: Camera.Position,
         mode: NeoCameraImpl.RoundVideoMode,
+        quality: RoundVideoQuality,
         usesMultiCam: Bool,
         log: ((String) -> Void)?,
         durationUpdated: @escaping (Double) -> Void,
@@ -268,7 +272,8 @@ final class VideoRecorder {
     ) {
         self.mediaQueue = mediaQueue
         self.processor = processor
-        self.statistics = VideoRecordingStatistics(mode: mode, usesMultiCam: usesMultiCam, log: log)
+        self.quality = quality
+        self.statistics = VideoRecordingStatistics(mode: mode, outputSide: processor.outputSide, usesMultiCam: usesMultiCam, log: log)
         self.url = url
         self.hasAudio = hasAudio
         self.activePosition = initialPosition
@@ -622,14 +627,14 @@ final class VideoRecorder {
         assetWriter.shouldOptimizeForNetworkUse = false
 
         let compressionProperties: [String: Any] = [
-            AVVideoAverageBitRateKey: 1_200_000,
+            AVVideoAverageBitRateKey: self.quality.videoBitrate,
             AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
             AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
         ]
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: RoundVideoFrameProcessor.outputWidth,
-            AVVideoHeightKey: RoundVideoFrameProcessor.outputHeight,
+            AVVideoWidthKey: self.processor.outputSide,
+            AVVideoHeightKey: self.processor.outputSide,
             AVVideoCompressionPropertiesKey: compressionProperties,
             AVVideoColorPropertiesKey: RoundVideoFrameProcessor.videoColorProperties(from: firstVideoFrame.source)
         ]
@@ -648,8 +653,8 @@ final class VideoRecorder {
 
         let sourcePixelBufferAttributes: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey as String: RoundVideoFrameProcessor.outputWidth,
-            kCVPixelBufferHeightKey as String: RoundVideoFrameProcessor.outputHeight,
+            kCVPixelBufferWidthKey as String: self.processor.outputSide,
+            kCVPixelBufferHeightKey as String: self.processor.outputSide,
             kCVPixelBufferMetalCompatibilityKey as String: true,
             kCVPixelBufferIOSurfacePropertiesKey as String: [:] as NSDictionary
         ]

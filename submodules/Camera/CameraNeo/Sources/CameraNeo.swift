@@ -20,6 +20,7 @@ final class CameraNeo: NSObject, CameraProtocol {
     private let configuration: Camera.Configuration
     private let useMultiCam: Bool
     private let roundVideoMode: NeoCameraImpl.RoundVideoMode
+    private let roundVideoQuality: RoundVideoQuality
     private let log: ((String) -> Void)?
     private let previewView: CameraPreviewView?
     private let secondaryPreviewView: CameraPreviewView?
@@ -80,6 +81,7 @@ final class CameraNeo: NSObject, CameraProtocol {
         secondaryPreviewView: CameraPreviewView?,
         useMultiCam: Bool,
         roundVideoMode: NeoCameraImpl.RoundVideoMode,
+        roundVideoQuality: RoundVideoQuality,
         log: ((String) -> Void)?
     ) {
         self.configuration = configuration
@@ -87,6 +89,7 @@ final class CameraNeo: NSObject, CameraProtocol {
         self.secondaryPreviewView = secondaryPreviewView
         self.useMultiCam = useMultiCam
         self.roundVideoMode = roundVideoMode
+        self.roundVideoQuality = roundVideoQuality
         self.log = log
         self.singleMediaPosition = configuration.position
         self.positionValue = Atomic<Camera.Position>(value: configuration.position)
@@ -333,11 +336,11 @@ final class CameraNeo: NSObject, CameraProtocol {
                     let processor: RoundVideoFrameProcessor
                     if let current = self.frameProcessor {
                         processor = current
-                    } else if let decorationResources, let current = RoundVideoFrameProcessor(mediaQueue: self.mediaQueue, decorationResources: decorationResources, mode: self.roundVideoMode) {
+                    } else if let decorationResources, let current = RoundVideoFrameProcessor(mediaQueue: self.mediaQueue, decorationResources: decorationResources, mode: self.roundVideoMode, quality: self.roundVideoQuality) {
                         self.frameProcessor = current
                         processor = current
                     } else {
-                        guard let current = RoundVideoFrameProcessor(mediaQueue: self.mediaQueue, decorationResources: nil, mode: self.roundVideoMode) else {
+                        guard let current = RoundVideoFrameProcessor(mediaQueue: self.mediaQueue, decorationResources: nil, mode: self.roundVideoMode, quality: self.roundVideoQuality) else {
                             let _ = self.recordingActive.modify { _ in false }
                             let _ = self.recordingStopRequested.modify { _ in false }
                             if subscriberActive.swap(false) {
@@ -350,6 +353,7 @@ final class CameraNeo: NSObject, CameraProtocol {
                     }
 
                     self.recordingOrientation = orientation
+                    let outputSide = processor.outputSide
                     let recorder = VideoRecorder(
                         mediaQueue: self.mediaQueue,
                         processor: processor,
@@ -357,6 +361,7 @@ final class CameraNeo: NSObject, CameraProtocol {
                         hasAudio: self.configuration.audio,
                         initialPosition: self.positionValue.with { $0 },
                         mode: self.roundVideoMode,
+                        quality: self.roundVideoQuality,
                         usesMultiCam: self.useMultiCam,
                         log: self.log,
                         durationUpdated: { [weak self] duration in
@@ -388,7 +393,7 @@ final class CameraNeo: NSObject, CameraProtocol {
                                         path: url.path,
                                         thumbnail: thumbnail ?? UIImage(),
                                         isMirrored: false,
-                                        dimensions: CGSize(width: RoundVideoFrameProcessor.outputWidth, height: RoundVideoFrameProcessor.outputHeight)
+                                        dimensions: CGSize(width: outputSide, height: outputSide)
                                     ),
                                     additional: nil,
                                     duration: duration,
