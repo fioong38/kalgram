@@ -1429,7 +1429,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             if let kalgramPeer = chatPresentationInterfaceState.renderedPeer?.peer {
                 kalgramChatTitle = EnginePeer(kalgramPeer).displayTitle(strings: chatPresentationInterfaceState.strings, displayOrder: .firstLast)
             }
-            actions.append(kalgramReminderMenuItem(context: context, controllerInteraction: controllerInteraction, chatTitle: kalgramChatTitle, message: message, text: messageText))
+            // A copy-protected message's text is not copied into the reminder file or the notification
+            let kalgramProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
+            actions.append(kalgramReminderMenuItem(context: context, controllerInteraction: controllerInteraction, chatTitle: kalgramChatTitle, message: message, text: kalgramProtected ? "" : messageText))
         }
 
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()

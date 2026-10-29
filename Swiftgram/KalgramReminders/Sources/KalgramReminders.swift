@@ -110,7 +110,12 @@ public final class KalgramReminderStore {
         }
         do {
             let data = try JSONEncoder().encode(items)
-            try data.write(to: fileUrl, options: .atomic)
+            // Readable after the first unlock, so snooze works from the lock screen; kept out of backups.
+            try data.write(to: fileUrl, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            var url = fileUrl
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? url.setResourceValues(values)
         } catch {
         }
     }
