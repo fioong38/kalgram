@@ -32,6 +32,16 @@ class WallpaperNYNode: ASDisplayNode {
                     cell1.scale = 0.15
                     cell1.scaleRange = 0.25
                     cell1.birthRate = 3.0
+                case SGSimpleSettings.NYStyle.custom.rawValue:
+                    // kalgram: the user's picture, stored small (KalgramEffects)
+                    if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("kalgram-particle.png"), let image = UIImage(contentsOfFile: url.path) {
+                        cell1.contents = image.cgImage
+                        // ~26pt on screen whatever the picture's size
+                        cell1.scale = 26.0 / max(1.0, max(image.size.width, image.size.height))
+                    }
+                    cell1.name = "custom"
+                    cell1.scaleRange = cell1.scale * 0.35
+                    cell1.birthRate = 3.0
                 default:
                     cell1.contents = UIImage(bundleImageName: "SGSnowflake")?.cgImage
                     cell1.name = "snow"
@@ -39,17 +49,29 @@ class WallpaperNYNode: ASDisplayNode {
                     cell1.scaleRange = 0.15
                     cell1.birthRate = 3.0
             }
-            // kalgram: ~75 particles on screen instead of ~550, the main cost of the effect
-            cell1.lifetime = 25.0
+            // kalgram: density and speed from kalgram Pro (0...100, 30 and 50 by default).
+            // ~75 particles on screen by default instead of ~550, the main cost of the effect.
+            let density = UserDefaults.standard.object(forKey: "kalgram.effect.density") as? Double ?? 30.0
+            let speed = UserDefaults.standard.object(forKey: "kalgram.effect.speed") as? Double ?? 50.0
+            cell1.birthRate = Float(max(0.5, density / 10.0))
+            // falls the height of the screen within its lifetime
+            let yAcceleration = 3.2 * (0.25 + speed / 50.0 * 0.75)
+            cell1.lifetime = Float(min(60.0, max(10.0, 25.0 * 3.2 / yAcceleration)))
             cell1.velocity = 1.0
             cell1.velocityRange = -1.5
             cell1.xAcceleration = 1.0
-            // kalgram: falls the height of the screen within the shorter lifetime
-            cell1.yAcceleration = 3.2
+            cell1.yAcceleration = CGFloat(yAcceleration)
             cell1.emissionRange = .pi
-            cell1.spin = -28.6 * (.pi / 180.0)
-            cell1.spinRange = 57.2 * (.pi / 180.0)
-            cell1.color = UIColor.white.withAlphaComponent(0.58).cgColor
+            if SGSimpleSettings.shared.nyStyle == SGSimpleSettings.NYStyle.custom.rawValue {
+                // a picture keeps its colors and turns only slightly
+                cell1.spin = 0.0
+                cell1.spinRange = 40.0 * (.pi / 180.0)
+                cell1.color = UIColor.white.cgColor
+            } else {
+                cell1.spin = -28.6 * (.pi / 180.0)
+                cell1.spinRange = 57.2 * (.pi / 180.0)
+                cell1.color = UIColor.white.withAlphaComponent(0.58).cgColor
+            }
 //            cell1.alphaRange = -0.2
             // kalgram: no snow at all in Low Power Mode
             if ProcessInfo.processInfo.isLowPowerModeEnabled {

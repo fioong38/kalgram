@@ -52,6 +52,65 @@ public enum KalgramNtfy {
             UserDefaults.standard.set(newValue, forKey: statusKey)
         }
     }
+
+    private static let testMessage = "kalgram: проверка уведомлений"
+
+    // Publishes a test notification to the topic, to check the ntfy app side.
+    // Only the fixed test text is sent.
+    public static func sendTest(completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: endpoint) else {
+            completion(false)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("kalgram", forHTTPHeaderField: "Title")
+        request.httpBody = testMessage.data(using: .utf8)
+        URLSession.shared.dataTask(with: request, completionHandler: { _, response, error in
+            let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
+            DispatchQueue.main.async {
+                completion(ok)
+            }
+        }).resume()
+    }
+
+    // Counts what Telegram published to the topic during the last 12 hours (ntfy.sh keeps
+    // that long), leaving out the test notifications. nil when ntfy.sh cannot be reached.
+    public static func recentTelegramPushes(completion: @escaping (_ count: Int?, _ lastDate: Date?) -> Void) {
+        guard let url = URL(string: "\(endpoint)/json?poll=1&since=12h") else {
+            completion(nil, nil)
+            return
+        }
+        URLSession.shared.dataTask(with: url, completionHandler: { data, response, error in
+            var count: Int?
+            var lastDate: Date?
+            if error == nil, (response as? HTTPURLResponse)?.statusCode == 200, let data, let text = String(data: data, encoding: .utf8) {
+                var result = 0
+                for line in text.split(separator: "\n") {
+                    guard let lineData = line.data(using: .utf8), let object = (try? JSONSerialization.jsonObject(with: lineData)) as? [String: Any] else {
+                        continue
+                    }
+                    guard object["event"] as? String == "message" else {
+                        continue
+                    }
+                    if object["message"] as? String == testMessage {
+                        continue
+                    }
+                    result += 1
+                    if let time = object["time"] as? Double {
+                        let date = Date(timeIntervalSince1970: time)
+                        if lastDate.flatMap({ $0 < date }) ?? true {
+                            lastDate = date
+                        }
+                    }
+                }
+                count = result
+            }
+            DispatchQueue.main.async {
+                completion(count, lastDate)
+            }
+        }).resume()
+    }
 }
 
 func _internal_registerSimplePushEndpoint(account: Account, endpoint: String, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<String?, NoError> {

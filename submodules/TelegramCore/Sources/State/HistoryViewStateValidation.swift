@@ -992,8 +992,11 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                                         return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                     })
                                 } else {
-                                    _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
-                                    Logger.shared.log("HistoryValidation", "deleting message \(id) in \(id.peerId)")
+                                    // kalgram: a private message the other side deleted stays, marked as deleted
+                                    if kalgramKeepDeletedMessages(transaction: transaction, accountPeerId: accountPeerId, ids: [id]).isEmpty {
+                                        _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
+                                        Logger.shared.log("HistoryValidation", "deleting message \(id) in \(id.peerId)")
+                                    }
                                 }
                             }
                         }

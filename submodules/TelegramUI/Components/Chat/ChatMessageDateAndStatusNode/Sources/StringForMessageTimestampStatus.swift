@@ -244,12 +244,17 @@ public func stringForMessageTimestampStatus(
     }
     
     if case .minimal = format {
-        
+
     } else {
         if let authorTitle = authorTitle, !authorTitle.isEmpty {
             dateText = "\(authorTitle), \(dateText)"
         }
     }
-    
+
+    // kalgram: kept although the other side deleted it; a local tag, a sender cannot fake it
+    if message.localTags.contains(.KalgramDeleted) {
+        dateText = "удалено \(dateText)"
+    }
+
     return dateText
 }

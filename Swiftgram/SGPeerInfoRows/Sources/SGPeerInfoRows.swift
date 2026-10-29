@@ -167,11 +167,11 @@ func sgPeerInfoSettingsItems(context: AccountContext, paymentsEnabled: Bool, pre
     }
 
     var items: [PeerInfoScreenItem] = []
-    if paymentsEnabled || context.sharedContext.immediateSGStatus.status > 1 {
-        items.append(PeerInfoScreenDisclosureItem(id: 0, label: swiftgramProLabel, text: "Swiftgram Pro", icon: PresentationResourcesSettings.swiftgramPro, action: {
-            interaction.openSettings(.swiftgramPro)
-        }))
-    }
+    // kalgram: the row opens kalgram Pro, the mod's own settings, so it is always shown
+    let _ = paymentsEnabled
+    items.append(PeerInfoScreenDisclosureItem(id: 0, label: swiftgramProLabel, text: "kalgram Pro", icon: PresentationResourcesSettings.swiftgramPro, action: {
+        interaction.openSettings(.swiftgramPro)
+    }))
     items.append(PeerInfoScreenDisclosureItem(id: 1, label: swiftgramLabel, text: "Swiftgram", icon: PresentationResourcesSettings.swiftgram, action: {
         interaction.openSettings(.swiftgram)
     }))

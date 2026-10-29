@@ -17,6 +17,8 @@ public final class ChatListHeaderComponent: Component {
         public let titleComponent: AnyComponent<Empty>?
         public let chatListTitle: NetworkStatusTitle?
         public let leftButton: NavigationBarComponent.Button?
+        // kalgram
+        public let leftAccessoryButton: NavigationBarComponent.Button?
         public let rightButtons: [NavigationBarComponent.Button]
         public let backPressed: (() -> Void)?
         /// iPhone Duo: the buttons' column behavior and VoiceOver titles, by button id.
@@ -27,6 +29,7 @@ public final class ChatListHeaderComponent: Component {
             titleComponent: AnyComponent<Empty>?,
             chatListTitle: NetworkStatusTitle?,
             leftButton: NavigationBarComponent.Button?,
+            leftAccessoryButton: NavigationBarComponent.Button? = nil,
             rightButtons: [NavigationBarComponent.Button],
             backPressed: (() -> Void)?,
             overflowInfo: [AnyHashable: NavigationBarComponent.OverflowInfo] = [:]
@@ -35,6 +38,7 @@ public final class ChatListHeaderComponent: Component {
             self.titleComponent = titleComponent
             self.chatListTitle = chatListTitle
             self.leftButton = leftButton
+            self.leftAccessoryButton = leftAccessoryButton
             self.rightButtons = rightButtons
             self.backPressed = backPressed
             self.overflowInfo = overflowInfo
@@ -51,6 +55,9 @@ public final class ChatListHeaderComponent: Component {
                 return false
             }
             if lhs.leftButton != rhs.leftButton {
+                return false
+            }
+            if lhs.leftAccessoryButton != rhs.leftAccessoryButton {
                 return false
             }
             if lhs.rightButtons != rhs.rightButtons {
@@ -324,6 +331,7 @@ public final class ChatListHeaderComponent: Component {
                 title: title,
                 back: (isSecondary || content.backPressed != nil) ? .back : nil,
                 leftButton: content.leftButton.map(applyOverflowInfo),
+                leftAccessoryButton: content.leftAccessoryButton,
                 rightButtons: content.rightButtons.map(applyOverflowInfo),
                 backPressed: content.backPressed ?? {}
             )

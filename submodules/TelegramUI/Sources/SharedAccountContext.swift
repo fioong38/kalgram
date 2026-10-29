@@ -550,7 +550,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let immediateExperimentalUISettingsValue = self.immediateExperimentalUISettingsValue
         let _ = immediateExperimentalUISettingsValue.swap(initialPresentationDataAndSettings.experimentalUISettings)
         
-        GlassBackgroundView.useCustomGlassImpl = immediateExperimentalUISettingsValue.with({ $0.fakeGlass })
+        GlassBackgroundView.useCustomGlassImpl = immediateExperimentalUISettingsValue.with({ $0.fakeGlass }) || GlassBackgroundView.kalgramFlatStyle
         ManagedAudioSessionImpl.respectsSystemRecordingInput = immediateExperimentalUISettingsValue.with({ $0.respectSystemMicrophone })
         
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
@@ -559,7 +559,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let _ = immediateExperimentalUISettingsValue.swap(settings)
                 
                 flatBuffers_checkedGet = settings.checkSerializedData
-                GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass
+                GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass || GlassBackgroundView.kalgramFlatStyle
                 ManagedAudioSessionImpl.respectsSystemRecordingInput = settings.respectSystemMicrophone
             }
         })
@@ -1110,9 +1110,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.updateNotificationTokensRegistration()
         
-        // kalgram: long press on the chat list ghost button opens the ghost settings
+        // kalgram: long press on the chat list ghost button opens kalgram Pro
         kalgramMakeGhostSettingsController = { context in
-            return sgSettingsController(context: context)
+            return kalgramProController(context: context)
         }
         // kalgram: the picture around the Dynamic Island, once the main window is up
         if applicationBindings.isMainApp {
@@ -1702,7 +1702,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         #else
         sandbox = false
         #endif
-        
+        let _ = sandbox // kalgram: APNs tokens are no longer registered
+
         let settings = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool) in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
@@ -1774,9 +1775,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         return account.engine.accountData.unregisterNotificationToken(token: token, type: .voip, otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
                     }
                 } else {
+                    // kalgram: Telegram signs APNs pushes for its own app, they never reach a sideloaded one.
+                    // A registered APNs token only competes with the ntfy endpoint, so it is removed instead.
                     let registeredAps: Signal<Bool, NoError>
                     if let apsNotificationToken {
-                        registeredAps = account.engine.accountData.registerNotificationToken(token: apsNotificationToken, type: .aps(encrypt: true), sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                        registeredAps = account.engine.accountData.unregisterNotificationToken(token: apsNotificationToken, type: .aps(encrypt: false), otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
+                        |> map { _ -> Bool in
+                        }
+                        |> then(.single(true))
                     } else {
                         registeredAps = .single(true)
                     }
@@ -1803,8 +1809,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         guard let token = token else {
                             return .complete()
                         }
-                        return account.engine.accountData.registerNotificationToken(token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
-                        |> ignoreValues
+                        // kalgram: VoIP pushes cannot reach a sideloaded app either
+                        return account.engine.accountData.unregisterNotificationToken(token: token, type: .voip, otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
                     }
                 }
                 

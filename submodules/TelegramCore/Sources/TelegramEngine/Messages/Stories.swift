@@ -2087,7 +2087,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             #endif
 
             // kalgram: ghost mode does not count story views either
-            if KalgramGhost.isActive(.stories) {
+            if KalgramGhost.isActive(.stories, accountPeerId: account.peerId) {
                 return .complete()
             }
 

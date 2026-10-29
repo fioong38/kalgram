@@ -610,7 +610,7 @@ public final class NavigationBarComponent: Component {
             var inPlaceRightPillCountChanges = false
             if let previousPrimary = previousComponent?.primaryContent, let primary = component.primaryContent, component.secondaryContent == nil, previousComponent?.secondaryContent == nil, component.sideColumnLength == nil, previousComponent?.sideColumnLength == nil, !self.plattersDetached {
                 if !transition.animation.isImmediate {
-                    inPlaceLeft = previousPrimary.back != primary.back || navigationBarCapsuleItemsDiffer(previousPrimary.leftButton.map { [$0] } ?? [], primary.leftButton.map { [$0] } ?? [])
+                    inPlaceLeft = previousPrimary.back != primary.back || navigationBarCapsuleItemsDiffer([previousPrimary.leftButton, previousPrimary.leftAccessoryButton].compactMap { $0 }, [primary.leftButton, primary.leftAccessoryButton].compactMap { $0 })
                     // UIKit's sections change apart, compared by index from the edge.
                     let previousSections = navigationBarButtonPlacement(leftButton: previousPrimary.leftButton, rightButtons: previousPrimary.rightButtons, hasBack: previousPrimary.back != nil, columnLength: nil).rowRightSections
                     let sections = navigationBarButtonPlacement(leftButton: primary.leftButton, rightButtons: primary.rightButtons, hasBack: primary.back != nil, columnLength: nil).rowRightSections

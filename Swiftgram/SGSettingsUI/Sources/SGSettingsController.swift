@@ -26,12 +26,6 @@ import UndoUI
 
 private enum SGControllerSection: Int32, SGItemListSection {
     case search
-    case kalgram
-    case kalgramProtection
-    case kalgramHistory
-    case kalgramIsland
-    case kalgramGhostQuick
-    case kalgramGhostPermanent
     case trending
     case content
     case tabs
@@ -51,21 +45,6 @@ private enum SGControllerSection: Int32, SGItemListSection {
 }
 
 private enum SGBoolSetting: String {
-    case bypassProtection
-    case keepSelfDestructing
-    case bypassIosRestrictions
-    case keepDeletedMessages
-    case keepEditHistory
-    case islandEnabled
-    case ghostQuickEnabled
-    case ghostQuickReadReceipts
-    case ghostQuickTyping
-    case ghostQuickOnline
-    case ghostQuickStories
-    case ghostPermanentReadReceipts
-    case ghostPermanentTyping
-    case ghostPermanentOnline
-    case ghostPermanentStories
     case hidePhoneInSettings
     case showTabNames
     case showContactsTab
@@ -147,8 +126,6 @@ private enum SGSliderSetting: String {
 }
 
 private enum SGDisclosureLink: String {
-    case ntfyCopyTopic
-    case islandPickImage
     case contentSettings
     case languageSettings
 }
@@ -168,57 +145,13 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     
     let lang = presentationData.strings.baseLanguageCode
     let strings = presentationData.strings
-    let newStr = strings.Settings_New
     var entries: [SGControllerEntry] = []
     
     let id = SGItemListCounter()
     
     entries.append(.searchInput(id: id.count, section: .search, title: NSAttributedString(string: "🔍"), text: state.searchQuery ?? "", placeholder: strings.Common_Search))
 
-    entries.append(.header(id: id.count, section: .kalgram, text: "УВЕДОМЛЕНИЯ NTFY", badge: nil))
-    entries.append(.disclosure(id: id.count, section: .kalgram, link: .ntfyCopyTopic, text: "Скопировать топик: \(KalgramNtfy.topic)"))
-    entries.append(.notice(id: id.count, section: .kalgram, text: "Установи ntfy из App Store, нажми + и вставь этот топик (сервер ntfy.sh).\nСтатус: \(KalgramNtfy.lastStatus ?? "ещё не регистрировался, перезапусти приложение")"))
-    
-    entries.append(.header(id: id.count, section: .kalgramProtection, text: "ЗАЩИЩЁННЫЙ КОНТЕНТ", badge: nil))
-    entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .bypassProtection, value: KalgramTweaks.bypassProtection, text: "Обходить запреты", enabled: true))
-    entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Копирование, сохранение и скриншоты там, где отправитель запретил. Скриншоты не отправляют уведомление собеседнику. Нужен перезапуск."))
-    entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
-    entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Одноразовые и таймерные фото и видео не исчезают после просмотра, и отправитель не видит, что ты открыл. Чтобы отметить просмотренным — долгий тап по сообщению → «🔥 Сжечь»."))
-    entries.append(.toggle(id: id.count, section: .kalgramProtection, settingName: .bypassIosRestrictions, value: KalgramTweaks.bypassIosRestrictions, text: "Открывать каналы, скрытые на iOS", enabled: true))
-    entries.append(.notice(id: id.count, section: .kalgramProtection, text: "Каналы и боты с пометкой «нарушает правила App Store» открываются, как на Android и ПК. Блокировки по закону остаются. Нужен перезапуск."))
-    
-    entries.append(.header(id: id.count, section: .kalgramHistory, text: "ЛИЧНЫЕ ЧАТЫ", badge: nil))
-    entries.append(.toggle(id: id.count, section: .kalgramHistory, settingName: .keepDeletedMessages, value: KalgramTweaks.keepDeletedMessages, text: "Сохранять удалённые", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramHistory, settingName: .keepEditHistory, value: KalgramTweaks.keepEditHistory, text: "Сохранять историю правок", enabled: true))
-    entries.append(.notice(id: id.count, section: .kalgramHistory, text: "Только личные чаты. Удалённое собеседником остаётся с пометкой «🗑 Удалено», у изменённого ниже видно «✏️ было: …». Работает для сообщений, пришедших, пока kalgram был запущен или синхронизировался."))
-    
-    entries.append(.header(id: id.count, section: .kalgramIsland, text: "КАРТИНКА У DYNAMIC ISLAND", badge: nil))
-    entries.append(.toggle(id: id.count, section: .kalgramIsland, settingName: .islandEnabled, value: KalgramIsland.shared.isEnabled && KalgramIsland.shared.hasImage, text: "Показывать", enabled: KalgramIsland.shared.hasImage))
-    entries.append(.disclosure(id: id.count, section: .kalgramIsland, link: .islandPickImage, text: KalgramIsland.shared.hasImage ? "Сменить картинку" : "Выбрать картинку"))
-    entries.append(.notice(id: id.count, section: .kalgramIsland, text: "Картинка вокруг островка, видна только внутри kalgram. Только айфоны с Dynamic Island."))
-
-    entries.append(.header(id: id.count, section: .kalgramGhostQuick, text: "👻 БЫСТРЫЙ ПРИЗРАК", badge: nil))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickEnabled, value: KalgramGhost.isQuickEnabled, text: "Включён", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickReadReceipts, value: KalgramGhost.isInQuickSet(.readReceipts), text: "Не отправлять «прочитано»", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickTyping, value: KalgramGhost.isInQuickSet(.typing), text: "Скрывать «печатает»", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickOnline, value: KalgramGhost.isInQuickSet(.online), text: "Не показывать онлайн", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostQuick, settingName: .ghostQuickStories, value: KalgramGhost.isInQuickSet(.stories), text: "Невидимый просмотр историй", enabled: true))
-    entries.append(.notice(id: id.count, section: .kalgramGhostQuick, text: "Что включает кнопка-призрак на экране чатов. Тап по ней — вкл/выкл, долгий тап — сюда."))
-
-    entries.append(.header(id: id.count, section: .kalgramGhostPermanent, text: "🔒 ПОСТОЯННЫЙ ПРИЗРАК", badge: nil))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentReadReceipts, value: KalgramGhost.isPermanent(.readReceipts), text: "Не отправлять «прочитано»", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentTyping, value: KalgramGhost.isPermanent(.typing), text: "Скрывать «печатает»", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentOnline, value: KalgramGhost.isPermanent(.online), text: "Не показывать онлайн", enabled: true))
-    entries.append(.toggle(id: id.count, section: .kalgramGhostPermanent, settingName: .ghostPermanentStories, value: KalgramGhost.isPermanent(.stories), text: "Невидимый просмотр историй", enabled: true))
-    entries.append(.notice(id: id.count, section: .kalgramGhostPermanent, text: "Работает всегда, кнопка на это не влияет."))
-    
-    
-    // kalgram: snow is always available, there is no Swiftgram server to allow it
-    entries.append(.header(id: id.count, section: .trending, text: i18n("Settings.NY.Header", lang), badge: newStr))
-    entries.append(.toggle(id: id.count, section: .trending, settingName: .nyStyleSnow, value: SGSimpleSettings.shared.nyStyle == SGSimpleSettings.NYStyle.snow.rawValue, text: i18n("Settings.NY.Style.snow", lang), enabled: true))
-    entries.append(.toggle(id: id.count, section: .trending, settingName: .nyStyleLightning, value: SGSimpleSettings.shared.nyStyle == SGSimpleSettings.NYStyle.lightning.rawValue, text: i18n("Settings.NY.Style.lightning", lang), enabled: true))
-    // entries.append(.oneFromManySelector(id: id.count, section: .trending, settingName: .nyStyle, text: i18n("Settings.NY.Style", lang), value: i18n("Settings.NY.Style.\(SGSimpleSettings.shared.nyStyle)", lang), enabled: true))
-    entries.append(.notice(id: id.count, section: .trending, text: i18n("Settings.NY.Notice", lang)))
+    // kalgram: the falling effect and the mod's own settings are in kalgram Pro
     
     if appConfiguration.sgWebSettings.global.canEditSettings {
         entries.append(.disclosure(id: id.count, section: .content, link: .contentSettings, text: i18n("Settings.ContentSettings", lang)))
@@ -424,38 +357,6 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
           }
         },*/ setBoolValue: { setting, value in
         switch setting {
-        case .islandEnabled:
-            KalgramIsland.shared.isEnabled = value
-        case .keepDeletedMessages:
-            KalgramTweaks.keepDeletedMessages = value
-        case .keepEditHistory:
-            KalgramTweaks.keepEditHistory = value
-        case .bypassIosRestrictions:
-            KalgramTweaks.bypassIosRestrictions = value
-            askForRestart?()
-        case .keepSelfDestructing:
-            KalgramTweaks.keepSelfDestructing = value
-        case .bypassProtection:
-            KalgramTweaks.bypassProtection = value
-            askForRestart?()
-        case .ghostQuickEnabled:
-            KalgramGhost.isQuickEnabled = value
-        case .ghostQuickReadReceipts:
-            KalgramGhost.setInQuickSet(.readReceipts, value)
-        case .ghostQuickTyping:
-            KalgramGhost.setInQuickSet(.typing, value)
-        case .ghostQuickOnline:
-            KalgramGhost.setInQuickSet(.online, value)
-        case .ghostQuickStories:
-            KalgramGhost.setInQuickSet(.stories, value)
-        case .ghostPermanentReadReceipts:
-            KalgramGhost.setPermanent(.readReceipts, value)
-        case .ghostPermanentTyping:
-            KalgramGhost.setPermanent(.typing, value)
-        case .ghostPermanentOnline:
-            KalgramGhost.setPermanent(.online, value)
-        case .ghostPermanentStories:
-            KalgramGhost.setPermanent(.stories, value)
         case .hidePhoneInSettings:
             SGSimpleSettings.shared.hidePhoneInSettings = value
             askForRestart?()
@@ -782,14 +683,6 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             return
         }
         switch (link) {
-            case .islandPickImage:
-                KalgramIsland.shared.pickImage(completion: {
-                    simplePromise.set(true)
-                })
-            case .ntfyCopyTopic:
-                UIPasteboard.general.string = KalgramNtfy.topic
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .copy(text: "Топик скопирован"), elevatedLayout: false, action: { _ in return false }), nil)
             case .languageSettings:
                 pushControllerImpl?(context.sharedContext.makeLocalizationListController(context: context))
             case .contentSettings:

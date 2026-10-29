@@ -8,6 +8,7 @@ import Postbox
 // the message's text entities stay valid. Only the local copy changes; nothing is
 // sent to the server.
 
+// Builds before the local tag wrote this into the text
 private let kalgramDeletedMarker = "🗑 Удалено"
 private let kalgramEditMarker = "\n\n✏️ было: "
 
@@ -44,7 +45,9 @@ func kalgramKeepDeletedMessages(transaction: Transaction, accountPeerId: PeerId,
             continue
         }
         kept.append(id)
-        if message.text.hasSuffix(kalgramDeletedMarker) {
+        // Marked with a local tag rather than in the text, so a sender cannot fake it:
+        // the chat shows "удалено" next to the time (stringForMessageTimestampStatus)
+        if message.localTags.contains(.KalgramDeleted) || message.text.hasSuffix(kalgramDeletedMarker) {
             continue
         }
         transaction.updateMessage(id, update: { currentMessage in
@@ -52,8 +55,9 @@ func kalgramKeepDeletedMessages(transaction: Transaction, accountPeerId: PeerId,
             if let forwardInfo = currentMessage.forwardInfo {
                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
             }
-            let text = currentMessage.text.isEmpty ? kalgramDeletedMarker : currentMessage.text + "\n\n" + kalgramDeletedMarker
-            return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: currentMessage.attributes, media: currentMessage.media))
+            var localTags = currentMessage.localTags
+            localTags.insert(.KalgramDeleted)
+            return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
         })
     }
     return kept

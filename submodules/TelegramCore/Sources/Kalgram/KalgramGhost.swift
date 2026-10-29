@@ -1,12 +1,14 @@
 import Foundation
+import Postbox
 
-// kalgram: ghost mode.
+// kalgram: ghost mode, separately for every account.
 //
-// Two layers decide whether a ghost feature is active:
+// Two layers decide whether a ghost feature is active for an account:
 // - permanent: features that are always on (e.g. invisible story views);
 // - quick: features toggled together by the ghost button in the chat list.
 // A feature is active when it is permanent, or when it is in the quick set and
-// the quick mode is on.
+// the quick mode is on. The button switches only the account it is shown for,
+// the other accounts keep whatever was chosen for them.
 //
 // Stored in UserDefaults so the network code can read it from any queue
 // without a Postbox transaction.
@@ -23,48 +25,53 @@ public enum KalgramGhostFeature: String, CaseIterable {
 }
 
 public enum KalgramGhost {
+    // Posted with the account id (Int64) as the object
     public static let didChangeNotification = Notification.Name("KalgramGhostDidChange")
 
-    private static let quickEnabledKey = "kalgram.ghost.quickEnabled"
-
-    private static func permanentKey(_ feature: KalgramGhostFeature) -> String {
-        return "kalgram.ghost.permanent.\(feature.rawValue)"
+    private static func accountKey(_ accountPeerId: PeerId) -> String {
+        return "kalgram.ghost.\(accountPeerId.id._internalGetInt64Value())"
     }
 
-    private static func quickKey(_ feature: KalgramGhostFeature) -> String {
-        return "kalgram.ghost.quick.\(feature.rawValue)"
-    }
-
-    public static var isQuickEnabled: Bool {
-        get {
-            return UserDefaults.standard.bool(forKey: quickEnabledKey)
+    // Value for the account, falling back to the setting from builds that had one
+    // ghost mode for all accounts
+    private static func bool(_ key: String, legacyKey: String, defaultValue: Bool) -> Bool {
+        if let value = UserDefaults.standard.object(forKey: key) as? Bool {
+            return value
         }
-        set {
-            UserDefaults.standard.set(newValue, forKey: quickEnabledKey)
-            NotificationCenter.default.post(name: didChangeNotification, object: nil)
-        }
+        return UserDefaults.standard.object(forKey: legacyKey) as? Bool ?? defaultValue
     }
 
-    public static func isPermanent(_ feature: KalgramGhostFeature) -> Bool {
-        return UserDefaults.standard.bool(forKey: permanentKey(feature))
+    private static func set(_ value: Bool, key: String, accountPeerId: PeerId) {
+        UserDefaults.standard.set(value, forKey: key)
+        NotificationCenter.default.post(name: didChangeNotification, object: accountPeerId.id._internalGetInt64Value())
     }
 
-    public static func setPermanent(_ feature: KalgramGhostFeature, _ value: Bool) {
-        UserDefaults.standard.set(value, forKey: permanentKey(feature))
-        NotificationCenter.default.post(name: didChangeNotification, object: nil)
+    public static func isQuickEnabled(accountPeerId: PeerId) -> Bool {
+        return bool("\(accountKey(accountPeerId)).quickEnabled", legacyKey: "kalgram.ghost.quickEnabled", defaultValue: false)
+    }
+
+    public static func setQuickEnabled(_ value: Bool, accountPeerId: PeerId) {
+        set(value, key: "\(accountKey(accountPeerId)).quickEnabled", accountPeerId: accountPeerId)
+    }
+
+    public static func isPermanent(_ feature: KalgramGhostFeature, accountPeerId: PeerId) -> Bool {
+        return bool("\(accountKey(accountPeerId)).permanent.\(feature.rawValue)", legacyKey: "kalgram.ghost.permanent.\(feature.rawValue)", defaultValue: false)
+    }
+
+    public static func setPermanent(_ feature: KalgramGhostFeature, _ value: Bool, accountPeerId: PeerId) {
+        set(value, key: "\(accountKey(accountPeerId)).permanent.\(feature.rawValue)", accountPeerId: accountPeerId)
     }
 
     // Every feature is in the quick set until the user removes it
-    public static func isInQuickSet(_ feature: KalgramGhostFeature) -> Bool {
-        return UserDefaults.standard.object(forKey: quickKey(feature)) as? Bool ?? true
+    public static func isInQuickSet(_ feature: KalgramGhostFeature, accountPeerId: PeerId) -> Bool {
+        return bool("\(accountKey(accountPeerId)).quick.\(feature.rawValue)", legacyKey: "kalgram.ghost.quick.\(feature.rawValue)", defaultValue: true)
     }
 
-    public static func setInQuickSet(_ feature: KalgramGhostFeature, _ value: Bool) {
-        UserDefaults.standard.set(value, forKey: quickKey(feature))
-        NotificationCenter.default.post(name: didChangeNotification, object: nil)
+    public static func setInQuickSet(_ feature: KalgramGhostFeature, _ value: Bool, accountPeerId: PeerId) {
+        set(value, key: "\(accountKey(accountPeerId)).quick.\(feature.rawValue)", accountPeerId: accountPeerId)
     }
 
-    public static func isActive(_ feature: KalgramGhostFeature) -> Bool {
-        return isPermanent(feature) || (isQuickEnabled && isInQuickSet(feature))
+    public static func isActive(_ feature: KalgramGhostFeature, accountPeerId: PeerId) -> Bool {
+        return isPermanent(feature, accountPeerId: accountPeerId) || (isQuickEnabled(accountPeerId: accountPeerId) && isInQuickSet(feature, accountPeerId: accountPeerId))
     }
 }

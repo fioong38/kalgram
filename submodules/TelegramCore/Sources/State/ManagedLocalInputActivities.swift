@@ -143,7 +143,7 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
 
 private func requestActivity(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, threadId: Int64?, activity: PeerInputActivity?) -> Signal<Void, NoError> {
     // kalgram: ghost mode sends no "typing…" activities
-    if KalgramGhost.isActive(.typing) {
+    if KalgramGhost.isActive(.typing, accountPeerId: accountPeerId) {
         return .complete()
     }
     return postbox.transaction { transaction -> Signal<Void, NoError> in

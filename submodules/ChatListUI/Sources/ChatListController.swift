@@ -2942,6 +2942,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 titleComponent: primaryContext.chatTitleComponent.flatMap { AnyComponent<Empty>($0) },
                 chatListTitle: primaryContext.chatListTitle,
                 leftButton: primaryContext.leftButton,
+                leftAccessoryButton: primaryContext.ghostButton,
                 rightButtons: primaryContext.rightButtons,
                 backPressed: displayBackButton ? { [weak self] in
                     guard let self else {
@@ -6930,6 +6931,11 @@ private func chatListHeaderOverflowInfo(strings: PresentationStrings) -> [AnyHas
 // kalgram: set by TelegramUI, which can depend on the Swiftgram settings screen
 public var kalgramMakeGhostSettingsController: ((AccountContext) -> ViewController)?
 
+// Drawn once: the bar compares image buttons by identity, a new image on every
+// update re-renders the button (it blinked while switching folders)
+private let kalgramGhostIconOn: UIImage? = kalgramGhostIcon(enabled: true)
+private let kalgramGhostIconOff: UIImage? = kalgramGhostIcon(enabled: false)
+
 private func kalgramGhostIcon(enabled: Bool) -> UIImage? {
     let size = CGSize(width: 26.0, height: 26.0)
     return generateImage(size, rotatedContext: { size, context in
@@ -6949,23 +6955,24 @@ private final class ChatListLocationContext {
     let location: ChatListControllerLocation
     weak var parentController: ChatListControllerImpl?
 
-    // kalgram: the ghost button toggles the quick ghost mode, a long press opens its settings
+    // kalgram: the ghost button toggles the quick ghost mode of this account, a long press opens its settings
     func makeKalgramGhostButton() -> NavigationBarComponent.Button {
-        let isEnabled = KalgramGhost.isQuickEnabled
+        let accountPeerId = self.context.account.peerId
+        let isEnabled = KalgramGhost.isQuickEnabled(accountPeerId: accountPeerId)
         let content: NavigationBarComponent.Button.Content
-        if let icon = kalgramGhostIcon(enabled: isEnabled) {
+        if let icon = isEnabled ? kalgramGhostIconOn : kalgramGhostIconOff {
             content = .image(icon)
         } else {
             content = .text(title: "👻", isBold: false)
         }
-        return NavigationBarComponent.Button(id: isEnabled ? "kalgramGhostOn" : "kalgramGhostOff",
+        return NavigationBarComponent.Button(id: "kalgramGhost",
             content: content,
             action: { [weak self] _ in
                 guard let self else {
                     return
                 }
-                let enabled = !KalgramGhost.isQuickEnabled
-                KalgramGhost.isQuickEnabled = enabled
+                let enabled = !KalgramGhost.isQuickEnabled(accountPeerId: accountPeerId)
+                KalgramGhost.setQuickEnabled(enabled, accountPeerId: accountPeerId)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 self.ghostButton = self.makeKalgramGhostButton()
                 self.parentController?.requestLayout(transition: .immediate)
@@ -6998,12 +7005,10 @@ private final class ChatListLocationContext {
     var proxyButton: NavigationBarComponent.Button?
     var storyButton: NavigationBarComponent.Button?
     var ghostButton: NavigationBarComponent.Button? // kalgram
+    private var ghostObserver: NSObjectProtocol?
 
     var rightButtons: [NavigationBarComponent.Button] {
         var result: [NavigationBarComponent.Button] = []
-        if let ghostButton = self.ghostButton {
-            result.append(ghostButton)
-        }
         // MARK: Swiftgram
         if let settingsButton = self.settingsButton {
             result.append(settingsButton)
@@ -7372,9 +7377,24 @@ private final class ChatListLocationContext {
                 }
             }
         })
+
+        // kalgram: the ghost button follows changes made in kalgram Pro
+        self.ghostObserver = NotificationCenter.default.addObserver(forName: KalgramGhost.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let self, self.ghostButton != nil else {
+                return
+            }
+            let ghostButton = self.makeKalgramGhostButton()
+            if self.ghostButton != ghostButton {
+                self.ghostButton = ghostButton
+                self.parentController?.requestLayout(transition: .immediate)
+            }
+        })
     }
                                 
     deinit {
+        if let ghostObserver = self.ghostObserver {
+            NotificationCenter.default.removeObserver(ghostObserver)
+        }
         self.titleDisposable?.dispose()
         self.stateDisposable?.dispose()
     }

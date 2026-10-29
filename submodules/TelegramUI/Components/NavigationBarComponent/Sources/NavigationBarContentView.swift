@@ -316,6 +316,15 @@ final class NavigationBarContentView: UIView {
             })
             nextLeftButtonX += buttonSize.width
         }
+        // kalgram: the accessory stays in the row, next to the left button
+        if let accessoryButton = content.leftAccessoryButton, columnLayout == nil || placement.rowLeftButton != nil {
+            validLeftButtons.insert(accessoryButton.id)
+            let originX = nextLeftButtonX
+            let buttonSize = self.updateButtonView(accessoryButton, isLeft: true, container: self.leftButtonsContainer, theme: theme, rowWidth: size.width, availableHeight: size.height, transition: itemsTransition, alphaTransition: alphaTransition, frame: { buttonSize in
+                return CGRect(origin: CGPoint(x: originX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+            })
+            nextLeftButtonX += buttonSize.width
+        }
 
         var validRightButtons = Set<AnyHashable>()
         var rightPillWidths: [CGFloat] = []

@@ -204,6 +204,8 @@ extension NavigationBarComponent {
         public let back: Back?
         /// Shown after the back button when both exist.
         public let leftButton: Button?
+        /// kalgram: a second left button, after `leftButton` in the same capsule (the chat list's ghost button).
+        public let leftAccessoryButton: Button?
         /// `rightButtons[0]` is the rightmost.
         public let rightButtons: [Button]
         public let backPressed: () -> Void
@@ -212,10 +214,11 @@ extension NavigationBarComponent {
         /// A long press on the back button (the chat's navigation stack); nil leaves it a plain button.
         public let backContextAction: ((UIView, ContextGesture) -> Void)?
 
-        public init(title: Title, back: Back?, leftButton: Button?, rightButtons: [Button], backPressed: @escaping () -> Void, badge: String? = nil, backContextAction: ((UIView, ContextGesture) -> Void)? = nil) {
+        public init(title: Title, back: Back?, leftButton: Button?, leftAccessoryButton: Button? = nil, rightButtons: [Button], backPressed: @escaping () -> Void, badge: String? = nil, backContextAction: ((UIView, ContextGesture) -> Void)? = nil) {
             self.title = title
             self.back = back
             self.leftButton = leftButton
+            self.leftAccessoryButton = leftAccessoryButton
             self.rightButtons = rightButtons
             self.backPressed = backPressed
             self.badge = badge
@@ -233,6 +236,9 @@ extension NavigationBarComponent {
                 return false
             }
             if lhs.leftButton != rhs.leftButton {
+                return false
+            }
+            if lhs.leftAccessoryButton != rhs.leftAccessoryButton {
                 return false
             }
             if lhs.rightButtons != rhs.rightButtons {

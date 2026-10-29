@@ -56,15 +56,8 @@ extension PeerInfoScreenNode {
         case .swiftgram:
             self.controller?.push(sgSettingsController(context: self.context))
         case .swiftgramPro:
-            if self.context.sharedContext.immediateSGStatus.status > 1 {
-                self.controller?.push(self.context.sharedContext.makeSGProController(context: self.context))
-            } else {
-                if let payWallController = self.context.sharedContext.makeSGPayWallController(context: self.context) {
-                    self.controller?.present(payWallController, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                } else {
-                    self.controller?.present(self.context.sharedContext.makeSGUpdateIOSController(), animated: true)
-                }
-            }
+            // kalgram: the Pro row is the mod's settings now, there is nothing to pay for
+            self.controller?.push(kalgramProController(context: self.context))
         case .avatar:
             self.controller?.openAvatarForEditing()
         case .edit:

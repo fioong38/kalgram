@@ -111,7 +111,7 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
 
 private func synchronizeConsumeMessageContents(transaction: Transaction, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
     // kalgram: ghost mode does not report listened voice and video messages
-    if KalgramGhost.isActive(.readReceipts) {
+    if KalgramGhost.isActive(.readReceipts, accountPeerId: stateManager.accountPeerId) {
         return .complete()
     }
     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {

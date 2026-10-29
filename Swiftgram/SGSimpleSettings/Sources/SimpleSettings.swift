@@ -252,6 +252,8 @@ public class SGSimpleSettings {
         case `default`
         case snow
         case lightning
+        // kalgram: a picture the user picked (Documents/kalgram-particle.png)
+        case custom
     }
     
     public static let defaultValues: [String: Any] = [

@@ -566,7 +566,12 @@ public class GlassBackgroundView: UIView {
     
     public private(set) var params: Params?
         
-    public static var useCustomGlassImpl: Bool = false
+    public static var useCustomGlassImpl: Bool = GlassBackgroundView.kalgramFlatStyle // kalgram
+
+    /// kalgram: the old interface. Flat translucent panels with a hairline edge instead of glass: no shadow, no
+    /// highlights, no lensing. Read once at launch (kalgram Pro sets the key and restarts the app); it also turns
+    /// the native glass off, through `useCustomGlassImpl`.
+    public static let kalgramFlatStyle: Bool = UserDefaults.standard.bool(forKey: "kalgram.oldInterface")
     
     public override init(frame: CGRect) {
         if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
@@ -776,11 +781,15 @@ public class GlassBackgroundView: UIView {
             self.params = params
             
             if let shadowView = self.shadowView {
-                switch shape {
-                case let .roundedRect(cornerRadius):
-                    shadowView.image = Self.generateLegacyShadowImage(cornerRadius: cornerRadius, shadowInset: shadowInset)
-                case let .customRoundedRect(cornerRadii):
-                    shadowView.image = Self.generateLegacyShadowImage(cornerRadii: GlassBackgroundView.clampedCornerRadii(size: size, cornerRadii: cornerRadii), shadowInset: shadowInset)
+                if GlassBackgroundView.kalgramFlatStyle {
+                    shadowView.image = nil
+                } else {
+                    switch shape {
+                    case let .roundedRect(cornerRadius):
+                        shadowView.image = Self.generateLegacyShadowImage(cornerRadius: cornerRadius, shadowInset: shadowInset)
+                    case let .customRoundedRect(cornerRadii):
+                        shadowView.image = Self.generateLegacyShadowImage(cornerRadii: GlassBackgroundView.clampedCornerRadii(size: size, cornerRadii: cornerRadii), shadowInset: shadowInset)
+                    }
                 }
                 transition.setAlpha(view: shadowView, alpha: isVisible ? 1.0 : 0.0)
             }
@@ -808,11 +817,22 @@ public class GlassBackgroundView: UIView {
                         borderWidthFactor = 1.0
                     }
                 }
-                switch shape {
-                case let .roundedRect(cornerRadius):
-                    foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(size: CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
-                case let .customRoundedRect(cornerRadii):
-                    foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(cornerRadii: GlassBackgroundView.clampedCornerRadii(size: size, cornerRadii: cornerRadii), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
+                if GlassBackgroundView.kalgramFlatStyle {
+                    let cornerRadii: CornerRadii
+                    switch shape {
+                    case let .roundedRect(cornerRadius):
+                        cornerRadii = CornerRadii(topLeft: cornerRadius, topRight: cornerRadius, bottomLeft: cornerRadius, bottomRight: cornerRadius)
+                    case let .customRoundedRect(value):
+                        cornerRadii = GlassBackgroundView.clampedCornerRadii(size: size, cornerRadii: value)
+                    }
+                    foregroundView.image = GlassBackgroundView.generateKalgramFlatImage(cornerRadii: cornerRadii, inset: shadowInset, isDark: isDark, fillColor: fillColor)
+                } else {
+                    switch shape {
+                    case let .roundedRect(cornerRadius):
+                        foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(size: CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
+                    case let .customRoundedRect(cornerRadii):
+                        foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(cornerRadii: GlassBackgroundView.clampedCornerRadii(size: size, cornerRadii: cornerRadii), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
+                    }
                 }
                 #if DEBUG
                 //foregroundView.image = nil
@@ -1407,6 +1427,26 @@ public extension GlassBackgroundView {
         }.stretchableImage(withLeftCapWidth: Int(size.width * 0.5), topCapHeight: Int(size.height * 0.5))
     }
     
+    /// kalgram: the old interface's panel, a translucent fill with a hairline edge (`kalgramFlatStyle`).
+    static func generateKalgramFlatImage(cornerRadii: CornerRadii, inset: CGFloat, isDark: Bool, fillColor: UIColor) -> UIImage {
+        let metrics = legacyResizableImageMetrics(cornerRadii: cornerRadii, inset: inset)
+        let innerRect = metrics.innerRect
+        return UIGraphicsImageRenderer(size: metrics.imageSize).image { ctx in
+            let context = ctx.cgContext
+            context.clear(CGRect(origin: CGPoint(), size: metrics.imageSize))
+            let path = UIBezierPath(roundedRect: innerRect, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: cornerRadii.topLeft, height: cornerRadii.topLeft))
+            context.addPath(path.cgPath)
+            context.setFillColor(fillColor.cgColor)
+            context.fillPath()
+            let lineWidth: CGFloat = 1.0 / max(1.0, UIScreenScale)
+            let borderPath = UIBezierPath(roundedRect: innerRect.insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5), byRoundingCorners: .allCorners, cornerRadii: CGSize(width: cornerRadii.topLeft, height: cornerRadii.topLeft))
+            context.addPath(borderPath.cgPath)
+            context.setLineWidth(lineWidth)
+            context.setStrokeColor((isDark ? UIColor(white: 1.0, alpha: 0.12) : UIColor(white: 0.0, alpha: 0.12)).cgColor)
+            context.strokePath()
+        }.stretchableImage(withLeftCapWidth: metrics.leftCapWidth, topCapHeight: metrics.topCapHeight)
+    }
+
     static func generateLegacyGlassImage(cornerRadii: CornerRadii, inset: CGFloat, borderWidthFactor: CGFloat = 1.0, isDark: Bool, fillColor: UIColor) -> UIImage {
         let metrics = legacyResizableImageMetrics(cornerRadii: cornerRadii, inset: inset)
         let size = metrics.imageSize

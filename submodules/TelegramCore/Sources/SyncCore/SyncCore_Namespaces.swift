@@ -217,6 +217,8 @@ public extension GlobalMessageTags {
 public extension LocalMessageTags {
     static let OutgoingLiveLocation = LocalMessageTags(rawValue: 1 << 0)
     static let OutgoingDeliveredToServer = LocalMessageTags(rawValue: 1 << 1)
+    // kalgram: kept after the other side deleted it (private chats); local only, shown next to the time
+    static let KalgramDeleted = LocalMessageTags(rawValue: 1 << 16)
 }
 
 public extension PendingMessageActionType {
