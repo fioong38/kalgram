@@ -1927,11 +1927,11 @@ private struct VideoMessageExportSettings {
     let dimensions: CGSize
     let bitrateKbps: Int
 
-    init(sourceSize: CGSize, cropSize: CGSize, rotateSideward: Bool) {
+    init(sourceSize: CGSize, cropSize: CGSize, rotateSideward: Bool, maximumDimension: CGFloat, bitrateKbps: Int) {
         // A quality ceiling must never enlarge a legacy recording or a smaller crop.
         let scale = min(
             1.0,
-            Self.maximumDimension / max(cropSize.width, cropSize.height),
+            maximumDimension / max(cropSize.width, cropSize.height),
             sourceSize.width / cropSize.width,
             sourceSize.height / cropSize.height
         )
@@ -1939,11 +1939,11 @@ private struct VideoMessageExportSettings {
             cropSize: CGSize(width: cropSize.width * scale, height: cropSize.height * scale),
             rotateSideward: rotateSideward
         )
-        self.bitrateKbps = max(self.dimensions.width, self.dimensions.height) <= 400.0 ? 1000 : 1200
+        self.bitrateKbps = max(self.dimensions.width, self.dimensions.height) <= 400.0 ? 1000 : bitrateKbps
     }
 }
 
-public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float, isSticker: Bool = false, isAvatar: Bool = false) -> MediaEditorVideoExport.Configuration {
+public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float, isSticker: Bool = false, isAvatar: Bool = false, videoMessageMaximumDimension: CGFloat = 480.0, videoMessageBitrateKbps: Int = 1200) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any]
     let codecType: Any
     
@@ -1994,7 +1994,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         let rotateSideward = values.cropOrientation?.isSideward ?? false
         let resultSize: CGSize
         if qualityPreset == .videoMessage {
-            let settings = VideoMessageExportSettings(sourceSize: sourceSize, cropSize: cropSize, rotateSideward: rotateSideward)
+            let settings = VideoMessageExportSettings(sourceSize: sourceSize, cropSize: cropSize, rotateSideward: rotateSideward, maximumDimension: videoMessageMaximumDimension, bitrateKbps: videoMessageBitrateKbps)
             resultSize = settings.dimensions
             videoBitrate = settings.bitrateKbps
         } else {

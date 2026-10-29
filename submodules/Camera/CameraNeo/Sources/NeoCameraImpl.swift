@@ -131,6 +131,46 @@ private func supportsDualCameraCapture(forRoundVideo: Bool, mode: NeoCameraImpl.
     }
 }
 
+// Output of a round video. The raw values match SGSimpleSettings.RoundVideoQualityValues.
+// The sensor delivers at least 1080 px square on the hd modes, so every size here is a
+// downscale; the vga mode is a 480 px source and never goes above it (see outputSide(for:)).
+public enum RoundVideoQuality: String, CaseIterable {
+    case standard
+    case high
+    case maximum
+
+    public var maximumSide: Int {
+        switch self {
+        case .standard:
+            return 480
+        case .high:
+            return 640
+        case .maximum:
+            return 800
+        }
+    }
+
+    public var videoBitrate: Int {
+        switch self {
+        case .standard:
+            return 1_200_000
+        case .high:
+            return 2_000_000
+        case .maximum:
+            return 3_000_000
+        }
+    }
+
+    func outputSide(for mode: NeoCameraImpl.RoundVideoMode) -> Int {
+        switch mode {
+        case .vga:
+            return min(self.maximumSide, 480)
+        case .hdBilinear, .hdLanczos:
+            return self.maximumSide
+        }
+    }
+}
+
 public final class NeoCameraImpl: CameraImpl {
     public enum RoundVideoMode: String {
         case vga
@@ -141,10 +181,12 @@ public final class NeoCameraImpl: CameraImpl {
     public static let shared = NeoCameraImpl()
 
     private let roundVideoMode: RoundVideoMode
+    private let roundVideoQuality: RoundVideoQuality
     private let log: ((String) -> Void)?
 
-    public init(roundVideoMode: RoundVideoMode = .hdBilinear, log: ((String) -> Void)? = nil) {
+    public init(roundVideoMode: RoundVideoMode = .hdBilinear, roundVideoQuality: RoundVideoQuality = .standard, log: ((String) -> Void)? = nil) {
         self.roundVideoMode = roundVideoMode
+        self.roundVideoQuality = roundVideoQuality
         self.log = log
         RoundVideoDecorationProvider.shared.warmUp()
     }
@@ -188,6 +230,7 @@ public final class NeoCameraImpl: CameraImpl {
             secondaryPreviewView: cameraSecondaryPreviewView,
             useMultiCam: configuration.isDualEnabled && self.isDualCameraSupported(forRoundVideo: configuration.isRoundVideo),
             roundVideoMode: self.roundVideoMode,
+            roundVideoQuality: self.roundVideoQuality,
             log: self.log
         )
     }

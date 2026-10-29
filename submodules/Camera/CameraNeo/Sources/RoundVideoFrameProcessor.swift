@@ -222,8 +222,8 @@ private final class RoundVideoLanczosScaler {
 }
 
 final class RoundVideoFrameProcessor {
-    static let outputWidth = 480
-    static let outputHeight = 480
+    // Side of the square frames this processor writes. Read by the recorder for its track settings.
+    let outputSide: Int
 
     private let device: MTLDevice
     private let mediaQueue: DispatchQueue
@@ -238,7 +238,8 @@ final class RoundVideoFrameProcessor {
     private var primaryLanczosScaler: RoundVideoLanczosScaler?
     private var secondaryLanczosScaler: RoundVideoLanczosScaler?
 
-    init?(mediaQueue: DispatchQueue, decorationResources: RoundVideoDecorationResources?, mode: NeoCameraImpl.RoundVideoMode) {
+    init?(mediaQueue: DispatchQueue, decorationResources: RoundVideoDecorationResources?, mode: NeoCameraImpl.RoundVideoMode, quality: RoundVideoQuality) {
+        let outputSide = quality.outputSide(for: mode)
         guard let device = MTLCreateSystemDefaultDevice(), let commandQueue = device.makeCommandQueue() else {
             return nil
         }
@@ -276,8 +277,8 @@ final class RoundVideoFrameProcessor {
         ]
         let pixelBufferAttributes: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey as String: Self.outputWidth,
-            kCVPixelBufferHeightKey as String: Self.outputHeight,
+            kCVPixelBufferWidthKey as String: outputSide,
+            kCVPixelBufferHeightKey as String: outputSide,
             kCVPixelBufferMetalCompatibilityKey as String: true,
             kCVPixelBufferIOSurfacePropertiesKey as String: [:] as NSDictionary
         ]
@@ -294,6 +295,7 @@ final class RoundVideoFrameProcessor {
         self.device = device
         self.mediaQueue = mediaQueue
         self.commandQueue = commandQueue
+        self.outputSide = outputSide
         self.mode = mode
         self.plainPipelineState = plainPipelineState
         self.decoration = decoration
@@ -463,8 +465,8 @@ final class RoundVideoFrameProcessor {
             Self.dispatch(
                 encoder: compositeEncoder,
                 pipelineState: decoration.compositePipelineState,
-                width: Self.outputWidth,
-                height: Self.outputHeight
+                width: self.outputSide,
+                height: self.outputSide
             )
             compositeEncoder.endEncoding()
         } else {
@@ -481,8 +483,8 @@ final class RoundVideoFrameProcessor {
             Self.dispatch(
                 encoder: encoder,
                 pipelineState: self.plainPipelineState,
-                width: Self.outputWidth,
-                height: Self.outputHeight
+                width: self.outputSide,
+                height: self.outputSide
             )
             encoder.endEncoding()
         }
@@ -498,7 +500,7 @@ final class RoundVideoFrameProcessor {
         self.isRendering = true
         statistics.renderSubmitted += 1
         statistics.pendingRenders += 1
-        if self.mode == .hdLanczos, min(primaryInputY.width, primaryInputY.height) > Self.outputWidth || (secondary != nil && min(secondaryInputY.width, secondaryInputY.height) > Self.outputWidth) {
+        if self.mode == .hdLanczos, min(primaryInputY.width, primaryInputY.height) > self.outputSide || (secondary != nil && min(secondaryInputY.width, secondaryInputY.height) > self.outputSide) {
             statistics.lanczosFrames += 1
         }
         if self.decoration != nil {
@@ -564,14 +566,14 @@ final class RoundVideoFrameProcessor {
 
     private func prepareInputTextures(y: MTLTexture, cbcr: MTLTexture, commandBuffer: MTLCommandBuffer, secondary: Bool) -> (y: MTLTexture, cbcr: MTLTexture)? {
         // VGA is already a 480-pixel square crop. Avoid a redundant filtering pass.
-        guard self.mode == .hdLanczos, min(y.width, y.height) > Self.outputWidth else {
+        guard self.mode == .hdLanczos, min(y.width, y.height) > self.outputSide else {
             return (y, cbcr)
         }
         let scaler: RoundVideoLanczosScaler
         if let current = secondary ? self.secondaryLanczosScaler : self.primaryLanczosScaler {
             scaler = current
         } else {
-            guard let current = RoundVideoLanczosScaler(device: self.device, width: Self.outputWidth, height: Self.outputHeight) else {
+            guard let current = RoundVideoLanczosScaler(device: self.device, width: self.outputSide, height: self.outputSide) else {
                 return nil
             }
             if secondary {
@@ -628,8 +630,8 @@ final class RoundVideoFrameProcessor {
             pixelBuffer,
             nil,
             .bgra8Unorm,
-            Self.outputWidth,
-            Self.outputHeight,
+            self.outputSide,
+            self.outputSide,
             0,
             &texture
         ) == kCVReturnSuccess else {

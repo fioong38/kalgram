@@ -179,8 +179,17 @@ public class SGSimpleSettings {
         case sendWithReturnKey
         case videoControlsInFooter
         case hideAccountInNotifications
+        case roundVideoQuality
     }
-    
+
+    // Output size and bitrate of round video messages recorded with the modern camera.
+    // Raw values must match CameraNeo's RoundVideoQuality.
+    public enum RoundVideoQualityValues: String, CaseIterable {
+        case standard
+        case high
+        case maximum
+    }
+
     public enum DownloadSpeedBoostValues: String, CaseIterable {
         case none
         case medium
@@ -345,6 +354,7 @@ public class SGSimpleSettings {
         Keys.status.rawValue: 1,
         Keys.showRepostToStoryV2.rawValue: true,
         Keys.hideAccountInNotifications.rawValue: false,
+        Keys.roundVideoQuality.rawValue: RoundVideoQualityValues.standard.rawValue,
     ]
     
     @UserDefault(key: Keys.hidePhoneInSettings.rawValue)
@@ -623,6 +633,9 @@ public class SGSimpleSettings {
 
     @UserDefault(key: Keys.hideAccountInNotifications.rawValue, userDefaults: UserDefaults(suiteName: APP_GROUP_IDENTIFIER) ?? .standard)
     public var hideAccountInNotifications: Bool
+
+    @UserDefault(key: Keys.roundVideoQuality.rawValue)
+    public var roundVideoQuality: String
 }
 
 extension SGSimpleSettings {

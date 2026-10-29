@@ -25,6 +25,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case notifications
     case badges
     case effects
+    case roundVideo
     case interface
 }
 
@@ -54,6 +55,7 @@ private enum KalgramProSlider: String {
 private enum KalgramProSelector: String {
     case effectStyle
     case backgroundMode
+    case roundVideoQuality
 }
 
 private enum KalgramProLink: String {
@@ -102,6 +104,17 @@ private func effectStyleTitle(_ style: String) -> String {
         return "🖼 Своя картинка"
     default:
         return "Выключено"
+    }
+}
+
+private func roundVideoQualityTitle(_ quality: String) -> String {
+    switch quality {
+    case SGSimpleSettings.RoundVideoQualityValues.high.rawValue:
+        return "Высокое (640 px)"
+    case SGSimpleSettings.RoundVideoQualityValues.maximum.rawValue:
+        return "Максимальное (800 px)"
+    default:
+        return "Стандарт (480 px)"
     }
 }
 
@@ -174,6 +187,10 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.header(id: id.count, section: .effects, text: "СКОРОСТЬ", badge: nil))
     entries.append(.percentageSlider(id: id.count, section: .effects, settingName: .effectSpeed, value: Int32(UserDefaults.standard.object(forKey: effectSpeedKey) as? Double ?? 50.0)))
     entries.append(.notice(id: id.count, section: .effects, text: "Меняется в чатах, открытых после настройки. В режиме энергосбережения эффект выключается сам."))
+
+    entries.append(.header(id: id.count, section: .roundVideo, text: "КРУЖКИ", badge: nil))
+    entries.append(.oneFromManySelector(id: id.count, section: .roundVideo, settingName: .roundVideoQuality, text: "Качество", value: roundVideoQualityTitle(SGSimpleSettings.shared.roundVideoQuality), enabled: true))
+    entries.append(.notice(id: id.count, section: .roundVideo, text: "Действует на кружки, записанные после изменения. Чем выше качество, тем чётче картинка, но файл больше и отправляется дольше. Уже отправленные не меняются."))
 
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .oldInterface, value: UserDefaults.standard.bool(forKey: oldInterfaceKey), text: "Старый интерфейс", enabled: true))
@@ -268,6 +285,23 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                             return
                         }
                         SGSimpleSettings.shared.nyStyle = style.rawValue
+                        reloadPromise.set(true)
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .roundVideoQuality:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for quality in SGSimpleSettings.RoundVideoQualityValues.allCases {
+                    items.append(ActionSheetButtonItem(title: roundVideoQualityTitle(quality.rawValue), color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        SGSimpleSettings.shared.roundVideoQuality = quality.rawValue
                         reloadPromise.set(true)
                     }))
                 }
