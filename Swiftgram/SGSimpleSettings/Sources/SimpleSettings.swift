@@ -252,7 +252,7 @@ public class SGSimpleSettings {
         case `default`
         case snow
         case lightning
-        // kalgram: a picture the user picked (Documents/kalgram-particle.png)
+        // kalgram: the pictures the user picked (Documents/kalgram-particle-0...4.png, see KalgramEffectSettings)
         case custom
     }
     
