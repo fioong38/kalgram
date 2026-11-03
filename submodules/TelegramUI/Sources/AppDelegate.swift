@@ -721,15 +721,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return true
         }
         
-        var isDebugConfiguration = false
+        // kalgram: a sideloaded build also carries a sandbox receipt, which made it write a detailed log
+        // to disk all the time. Logging stays available by hand in the debug settings.
         #if DEBUG
-        isDebugConfiguration = true
+        let isDebugConfiguration = true
+        #else
+        let isDebugConfiguration = false
         #endif
-        
-        if Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" {
-            isDebugConfiguration = true
-        }
-        
+
         if isDebugConfiguration || buildConfig.isInternalBuild {
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
         } else {
