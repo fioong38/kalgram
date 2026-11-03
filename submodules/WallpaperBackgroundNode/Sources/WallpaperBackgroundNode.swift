@@ -1219,7 +1219,9 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
 
     private func kalgramInstallEffectIfNeeded(size: CGSize) {
         let style = KalgramEffectSettings.effectiveStyle(peerId: self.kalgramEffectPeerId)
-        if style != SGSimpleSettings.NYStyle.default.rawValue && self.NYNode == nil {
+        // kalgram: no falling effect while Power Saving has the interface effects off, or the battery is
+        // below its threshold (checked when the chat opens)
+        if style != SGSimpleSettings.NYStyle.default.rawValue && self.NYNode == nil && self.context.sharedContext.energyUsageSettings.fullTranslucency {
             let nYNode = WallpaperNYNode(style: style)
             self.addSubnode(nYNode)
             self.NYNode = nYNode
