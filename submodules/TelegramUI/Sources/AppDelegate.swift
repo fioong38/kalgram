@@ -11,6 +11,7 @@ import SGAPIWebSettings
 import SGLogging
 import SGStrings
 import SGSimpleSettings
+import SGSettingsUI
 import KalgramReminders // kalgram: reminder notifications
 //
 import UIKit
@@ -369,6 +370,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         precondition(!testIsLaunched)
         testIsLaunched = true
         CrashReportCollector.shared.start()
+        // kalgram: iOS's daily report of what kalgram spent, shown in kalgram Pro
+        KalgramEnergyReport.shared.start()
         
         let _ = voipTokenPromise.get().start(next: { token in
             self.voipDeviceToken.set(.single(token))

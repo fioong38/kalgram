@@ -30,6 +30,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case proxy
     case interface
     case ads
+    case energy
 }
 
 private enum KalgramProToggle: String {
@@ -254,6 +255,14 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .oldInterface, value: UserDefaults.standard.bool(forKey: oldInterfaceKey), text: "Старый интерфейс", enabled: true))
     entries.append(.notice(id: id.count, section: .interface, text: "Как до «жидкого стекла»: плоские панели без бликов и теней, панель вкладок во всю ширину внизу экрана с подписями. Нужен перезапуск."))
+
+    // kalgram: iOS's own daily report of what kalgram spent (MetricKit)
+    let energyDays = KalgramEnergyReport.shared.days
+    entries.append(.header(id: id.count, section: .energy, text: "🔋 РАСХОД ЗА СУТКИ", badge: nil))
+    if let latest = energyDays.first {
+        entries.append(.notice(id: id.count, section: .energy, text: kalgramEnergyReportText(latest, previous: energyDays.count > 1 ? energyDays[1] : nil)))
+    }
+    entries.append(.notice(id: id.count, section: .energy, text: energyDays.isEmpty ? "Отчёта ещё нет. iOS присылает его примерно раз в сутки, первый — обычно через день после установки. Отчёт остаётся на телефоне, никуда не отправляется." : "Отчёт присылает iOS примерно раз в сутки. Сравнивать дни удобно по «на час экрана»: это не зависит от того, сколько ты сидел. Остаётся на телефоне, никуда не отправляется."))
 
     return entries
 }
