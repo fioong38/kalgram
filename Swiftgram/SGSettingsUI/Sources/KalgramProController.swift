@@ -21,6 +21,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case ghostPermanent
     case history
     case protection
+    case sending
     case background
     case notifications
     case badges
@@ -57,6 +58,8 @@ private enum KalgramProToggle: String {
     case studyEnabled
     case proxyAutoSwitch
     case proxyRespectVpn
+    case sendingAntiCaps
+    case sendingWordReplacement
 }
 
 private enum KalgramProSlider: String {
@@ -82,6 +85,8 @@ private enum KalgramProLink: String {
     case badges
     case effectAddImage
     case effectRemoveImages
+    case sendingAddRule
+    case sendingRemoveRules
 }
 
 private enum KalgramProAction: Hashable {
@@ -173,6 +178,20 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .protection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
     entries.append(.toggle(id: id.count, section: .protection, settingName: .bypassIosRestrictions, value: KalgramTweaks.bypassIosRestrictions, text: "Открывать каналы, скрытые на iOS", enabled: true))
     entries.append(.notice(id: id.count, section: .protection, text: "Одноразки не исчезают, и отправитель не видит, что ты открыл. Отметить просмотренной: долгий тап по сообщению → «🔥 Сжечь». Каналы с пометкой «нарушал правила App Store» открываются; блокировки по закону остаются."))
+
+    let sendingRules = KalgramOutgoing.rules
+    entries.append(.header(id: id.count, section: .sending, text: "ОТПРАВКА", badge: nil))
+    entries.append(.toggle(id: id.count, section: .sending, settingName: .sendingAntiCaps, value: KalgramOutgoing.antiCaps, text: "Анти-капс", enabled: true))
+    entries.append(.toggle(id: id.count, section: .sending, settingName: .sendingWordReplacement, value: KalgramOutgoing.wordReplacement, text: "Автозамена слов", enabled: true))
+    entries.append(.disclosure(id: id.count, section: .sending, link: .sendingAddRule, text: "Добавить правило замены"))
+    if !sendingRules.isEmpty {
+        entries.append(.disclosure(id: id.count, section: .sending, link: .sendingRemoveRules, text: "Убрать все правила"))
+    }
+    var sendingNotice = "Анти-капс: ПРИВЕТ ВСЕМ → Привет всем. Автозамена меняет только целые слова, без учёта регистра. Ссылки, упоминания, команды и код не трогаются, ботам текст уходит как есть."
+    if !sendingRules.isEmpty {
+        sendingNotice += "\n\nПравила:\n" + sendingRules.map { "\($0.source) → \($0.replacement)" }.joined(separator: "\n")
+    }
+    entries.append(.notice(id: id.count, section: .sending, text: sendingNotice))
 
     entries.append(.header(id: id.count, section: .ads, text: "РЕКЛАМА", badge: nil))
     entries.append(.toggle(id: id.count, section: .ads, settingName: .adsHideSponsored, value: SGSimpleSettings.shared.kalgramHideSponsored, text: "Спонсорские сообщения", enabled: true))
@@ -342,6 +361,10 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramProxySettings.autoSwitch = value
             case .proxyRespectVpn:
                 KalgramProxySettings.respectVpn = value
+            case .sendingAntiCaps:
+                KalgramOutgoing.antiCaps = value
+            case .sendingWordReplacement:
+                KalgramOutgoing.wordReplacement = value
             }
             reloadPromise.set(true)
         },
@@ -491,6 +514,24 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     SGSimpleSettings.shared.nyStyle = SGSimpleSettings.NYStyle.default.rawValue
                 }
                 showToast?("Картинки убраны")
+                reloadPromise.set(true)
+            case .sendingAddRule:
+                let alert = UIAlertController(title: "Правило замены", message: nil, preferredStyle: .alert)
+                alert.addTextField { field in
+                    field.placeholder = "Что заменять"
+                }
+                alert.addTextField { field in
+                    field.placeholder = "На что"
+                }
+                alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+                alert.addAction(UIAlertAction(title: "Добавить", style: .default, handler: { [weak alert] _ in
+                    KalgramOutgoing.addRule(source: alert?.textFields?.first?.text ?? "", replacement: alert?.textFields?.last?.text ?? "")
+                    reloadPromise.set(true)
+                }))
+                KalgramImagePicker.topViewController()?.present(alert, animated: true)
+            case .sendingRemoveRules:
+                KalgramOutgoing.rules = []
+                showToast?("Правила убраны")
                 reloadPromise.set(true)
             }
         },

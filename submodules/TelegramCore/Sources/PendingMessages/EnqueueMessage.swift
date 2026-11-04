@@ -755,6 +755,9 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
                 }
             }
 
+            // kalgram: text rules
+            normalMessages = kalgramApplyOutgoing(normalMessages, transaction: transaction, account: account, peerId: peerId)
+
             if !normalMessages.isEmpty {
                 let normalIds = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: normalMessages)
                 for i in 0 ..< min(normalIds.count, normalMessageIndices.count) {
