@@ -82,6 +82,19 @@ public enum KalgramOutgoing {
         UserDefaults.standard.set(Int(value), forKey: sendDelaySecondsKey(accountPeerId))
     }
 
+    // While ghost mode holds read receipts back, a reply or a reaction still marks that chat read
+    private static func readOnActionKey(_ accountPeerId: PeerId) -> String {
+        return "kalgram.ghost.\(accountPeerId.id._internalGetInt64Value()).readOnAction"
+    }
+
+    public static func isReadOnAction(accountPeerId: PeerId) -> Bool {
+        return UserDefaults.standard.bool(forKey: readOnActionKey(accountPeerId))
+    }
+
+    public static func setReadOnAction(_ value: Bool, accountPeerId: PeerId) {
+        UserDefaults.standard.set(value, forKey: readOnActionKey(accountPeerId))
+    }
+
     // A new rule for a word already in the list takes its place
     public static func addRule(source: String, replacement: String) {
         let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -336,6 +349,18 @@ func kalgramApplyOutgoing(_ messages: [(Bool, EnqueueMessage)], transaction: Tra
         }
     }
     return result
+}
+
+// A send that goes out now counts as an action; a delayed or scheduled one reads nothing
+func kalgramReadsOnSend(_ messages: [(Bool, EnqueueMessage)], account: Account) -> Bool {
+    if messages.isEmpty || !kalgramReadOnActionApplies(account: account) {
+        return false
+    }
+    return !messages.contains(where: { $0.1.attributes.contains(where: { $0 is OutgoingScheduleInfoMessageAttribute }) })
+}
+
+func kalgramReadOnActionApplies(account: Account) -> Bool {
+    return KalgramOutgoing.isReadOnAction(accountPeerId: account.peerId) && KalgramGhost.isActive(.readReceipts, accountPeerId: account.peerId)
 }
 
 private func kalgramCanDelay(_ messages: [(Bool, EnqueueMessage)], account: Account, peerId: PeerId) -> Bool {

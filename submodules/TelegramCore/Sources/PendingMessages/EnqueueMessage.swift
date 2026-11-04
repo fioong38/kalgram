@@ -736,7 +736,7 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
     }
     return signal
     |> mapToSignal { messages -> Signal<[MessageId?], NoError> in
-        return account.postbox.transaction { transaction -> ([MessageId?], [MessageId]) in
+        return account.postbox.transaction { transaction -> ([MessageId?], [MessageId], Bool) in
             var resultIds = Array<MessageId?>(repeating: nil, count: messages.count)
             var ephemeralMessageIds: [MessageId] = []
             var normalMessages: [(Bool, EnqueueMessage)] = []
@@ -765,11 +765,14 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
                 }
             }
 
-            return (resultIds, ephemeralMessageIds)
+            return (resultIds, ephemeralMessageIds, kalgramReadsOnSend(normalMessages, account: account))
         }
-        |> map { resultIds, ephemeralMessageIds -> [MessageId?] in
+        |> map { resultIds, ephemeralMessageIds, kalgramReadsChat -> [MessageId?] in
             for messageId in ephemeralMessageIds {
                 let _ = _internal_sendEphemeralOutgoingMessage(account: account, messageId: messageId).startStandalone()
+            }
+            if kalgramReadsChat {
+                let _ = _internal_kalgramSendReadReceipt(postbox: account.postbox, network: account.network, stateManager: account.stateManager, peerId: peerId).startStandalone()
             }
             return resultIds
         }

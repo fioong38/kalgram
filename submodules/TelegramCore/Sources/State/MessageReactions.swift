@@ -22,6 +22,10 @@ public enum UpdateMessageReaction {
 }
 
 public func updateMessageReactionsInteractively(account: Account, messageIds: [MessageId], reactions: [UpdateMessageReaction], isLarge: Bool, storeAsRecentlyUsed: Bool, add: Bool = false) -> Signal<Never, NoError> {
+    // kalgram: a reaction counts as an action for «читать при действиях»
+    if let peerId = messageIds.first?.peerId, kalgramReadOnActionApplies(account: account) {
+        let _ = _internal_kalgramSendReadReceipt(postbox: account.postbox, network: account.network, stateManager: account.stateManager, peerId: peerId).startStandalone()
+    }
     return account.postbox.transaction { transaction -> Void in
         guard let chatPeerId = messageIds.first?.peerId else {
             return

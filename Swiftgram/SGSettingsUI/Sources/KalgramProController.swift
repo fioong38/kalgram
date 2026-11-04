@@ -61,6 +61,7 @@ private enum KalgramProToggle: String {
     case sendingAntiCaps
     case sendingWordReplacement
     case sendingDelay
+    case ghostReadOnAction
 }
 
 private enum KalgramProSlider: String {
@@ -168,7 +169,8 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .ghostPermanent, settingName: .ghostPermanentTyping, value: KalgramGhost.isPermanent(.typing, accountPeerId: accountPeerId), text: "Скрывать «печатает»", enabled: true))
     entries.append(.toggle(id: id.count, section: .ghostPermanent, settingName: .ghostPermanentOnline, value: KalgramGhost.isPermanent(.online, accountPeerId: accountPeerId), text: "Не показывать онлайн", enabled: true))
     entries.append(.toggle(id: id.count, section: .ghostPermanent, settingName: .ghostPermanentStories, value: KalgramGhost.isPermanent(.stories, accountPeerId: accountPeerId), text: "Невидимый просмотр историй", enabled: true))
-    entries.append(.notice(id: id.count, section: .ghostPermanent, text: "Работает на этом аккаунте всегда, с первой секунды после входа, кнопка 👻 на это не влияет."))
+    entries.append(.toggle(id: id.count, section: .ghostPermanent, settingName: .ghostReadOnAction, value: KalgramOutgoing.isReadOnAction(accountPeerId: accountPeerId), text: "Читать при ответе и реакции", enabled: true))
+    entries.append(.notice(id: id.count, section: .ghostPermanent, text: "Работает на этом аккаунте всегда, с первой секунды после входа, кнопка 👻 на это не влияет. «Читать при ответе и реакции»: пока «прочитано» скрыто, ответ или реакция отмечают прочитанным этот чат. Отправка с задержкой ничего не отмечает."))
 
     entries.append(.header(id: id.count, section: .history, text: "ЛИЧНЫЕ ЧАТЫ", badge: nil))
     entries.append(.toggle(id: id.count, section: .history, settingName: .keepDeletedMessages, value: KalgramTweaks.keepDeletedMessages, text: "Сохранять удалённые", enabled: true))
@@ -373,6 +375,8 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramOutgoing.wordReplacement = value
             case .sendingDelay:
                 KalgramOutgoing.setSendDelayEnabled(value, accountPeerId: accountPeerId)
+            case .ghostReadOnAction:
+                KalgramOutgoing.setReadOnAction(value, accountPeerId: accountPeerId)
             }
             reloadPromise.set(true)
         },
