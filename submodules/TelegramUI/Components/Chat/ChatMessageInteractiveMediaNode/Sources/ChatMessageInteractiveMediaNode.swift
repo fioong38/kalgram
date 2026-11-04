@@ -946,7 +946,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 }
             }
             
-            let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
+            let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) && !KalgramTweaks.revealSpoilers
             var isExtendedMediaPreview = false
             var isInlinePlayableVideo = false
             var isSticker = false
@@ -2169,7 +2169,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                             
-                            if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), strongSelf.extendedMediaOverlayNode == nil {
+                            if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), !KalgramTweaks.revealSpoilers, strongSelf.extendedMediaOverlayNode == nil {
                                 strongSelf.internallyVisible = false
                             }
                                                         
@@ -3111,7 +3111,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 icon = .lock
             }
             displaySpoiler = true
-        } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
+        } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), !KalgramTweaks.revealSpoilers {
             displaySpoiler = true
         } else if isSecretMedia {
             displaySpoiler = true

@@ -1004,7 +1004,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
             self.playIcon.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
         
-        let hasSpoiler = self.message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
+        let hasSpoiler = self.message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) && !KalgramTweaks.revealSpoilers
         
         var isRound = false
         var dimensions = CGSize(width: 100.0, height: 100.0)
@@ -2882,7 +2882,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let messageString: NSAttributedString
                         if let foldedRichTextPreview {
                             let spoilerRanges = (customTextEntities?.textEntities ?? []).compactMap { entity -> NSRange? in
-                                guard case .Spoiler = entity.type else { return nil }
+                                guard case .Spoiler = entity.type, !KalgramTweaks.revealSpoilers else { return nil }
                                 return NSRange(location: entity.range.lowerBound, length: entity.range.count)
                             }
                             messageString = chatListRichTextPreview(foldedRichTextPreview, font: textFont, italicFont: italicTextFont, textColor: theme.messageTextColor, additionalSpoilers: spoilerRanges)
@@ -2899,7 +2899,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                     } else if range.location + range.length > mutableString.length {
                                         range.length = mutableString.length - range.location
                                     }
-                                    mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)
+                                    if !KalgramTweaks.revealSpoilers {
+                                        mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)
+                                    }
                                 }
                             }
                             if let customEmojiRanges = customEmojiRanges {

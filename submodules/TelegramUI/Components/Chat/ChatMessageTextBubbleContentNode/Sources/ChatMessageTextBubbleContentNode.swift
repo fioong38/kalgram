@@ -441,6 +441,16 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 
+                // kalgram: anti-spoiler
+                if KalgramTweaks.revealSpoilers, let entities = messageEntities {
+                    messageEntities = entities.filter { entity in
+                        if case .Spoiler = entity.type {
+                            return false
+                        }
+                        return true
+                    }
+                }
+
                 if incoming && item.associatedData.isSuspiciousPeer, let entities = messageEntities {
                     messageEntities = entities.filter(\.isShownFromSuspiciousPeer)
                 }

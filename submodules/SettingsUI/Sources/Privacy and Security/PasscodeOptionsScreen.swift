@@ -54,7 +54,8 @@ private func passcodeOptionsAutolockString(strings: PresentationStrings, timeout
     case 5 * 60 * 60:
         return strings.PasscodeSettings_AutoLock_IfAwayFor_5hours
     default:
-        return ""
+        // kalgram: the extra auto-lock choices
+        return KalgramTweaks.autolockTitle(timeout)
     }
 }
 
@@ -607,6 +608,10 @@ private final class PasscodeOptionsScreenComponent: Component {
             values.append(10)
             values.sort()
             #endif
+            if KalgramTweaks.moreAutolock {
+                values.append(contentsOf: KalgramTweaks.extraAutolockValues)
+                values.sort()
+            }
 
             var items: [ContextMenuItem] = []
             for value in values {

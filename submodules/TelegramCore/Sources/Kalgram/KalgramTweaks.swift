@@ -95,6 +95,70 @@ public enum KalgramTweaks {
         }
     }
 
+    // Text and media under a spoiler are visible at once. Off by default.
+    public static let revealSpoilersKey = "kalgram.revealSpoilers"
+
+    public static var revealSpoilers: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: revealSpoilersKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: revealSpoilersKey)
+        }
+    }
+
+    // An empty private chat without the "say hello" sticker, which also means not loading it.
+    public static let hideGreetingStickerKey = "kalgram.hideGreetingSticker"
+
+    public static var hideGreetingSticker: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideGreetingStickerKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideGreetingStickerKey)
+        }
+    }
+
+    // Up to 200 recent chats in search instead of 20.
+    public static let longRecentSearchKey = "kalgram.longRecentSearch"
+
+    public static var longRecentSearch: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: longRecentSearchKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: longRecentSearchKey)
+        }
+    }
+
+    public static var recentSearchLimit: Int {
+        return longRecentSearch ? 200 : 20
+    }
+
+    // More choices in the passcode's auto-lock menu.
+    public static let moreAutolockKey = "kalgram.moreAutolock"
+
+    public static var moreAutolock: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: moreAutolockKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: moreAutolockKey)
+        }
+    }
+
+    public static let extraAutolockValues: [Int32] = [5, 2 * 60, 10 * 60, 15 * 60, 30 * 60, 2 * 60 * 60, 8 * 60 * 60, 24 * 60 * 60]
+
+    public static func autolockTitle(_ timeout: Int32) -> String {
+        if timeout < 60 {
+            return "Через \(timeout) с"
+        } else if timeout < 60 * 60 {
+            return "Через \(timeout / 60) мин"
+        } else {
+            return "Через \(timeout / (60 * 60)) ч"
+        }
+    }
+
     public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
 
     public static var keepSelfDestructing: Bool {
