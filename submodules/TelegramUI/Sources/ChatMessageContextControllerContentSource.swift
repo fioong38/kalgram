@@ -30,7 +30,10 @@ final class ChatMessageContextLocationContentSource: ContextLocationContentSourc
 final class ChatMessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = false
-    let blurBackground: Bool = true
+    // kalgram: no blur under the message menu when turned off
+    var blurBackground: Bool {
+        return !KalgramTweaks.noSelectionBlur
+    }
     let centerVertically: Bool
     let keepDefaultContentTouches: Bool
     
@@ -135,7 +138,10 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
 final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = false
-    let blurBackground: Bool = true
+    // kalgram: no blur under the message menu when turned off
+    var blurBackground: Bool {
+        return !KalgramTweaks.noSelectionBlur
+    }
     let centerVertically: Bool = true
     
     var initialAppearanceOffset: CGPoint = .zero
@@ -432,7 +438,10 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
 final class ChatMessageReactionContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
-    let blurBackground: Bool = true
+    // kalgram: no blur under the message menu when turned off
+    var blurBackground: Bool {
+        return !KalgramTweaks.noSelectionBlur
+    }
     let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
     
     private weak var chatNode: ChatControllerNode?
@@ -507,7 +516,10 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
 final class ChatMessageNavigationButtonContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
-    let blurBackground: Bool = true
+    // kalgram: no blur under the message menu when turned off
+    var blurBackground: Bool {
+        return !KalgramTweaks.noSelectionBlur
+    }
     let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
     
     private weak var chatNode: ChatControllerNode?

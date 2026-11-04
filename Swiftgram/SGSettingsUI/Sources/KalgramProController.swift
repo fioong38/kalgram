@@ -68,6 +68,12 @@ private enum KalgramProToggle: String {
     case longRecentSearch
     case moreAutolock
     case hideBlockedMessages
+    case amoled
+    case hideSeparators
+    case exactLastSeen
+    case noSelectionBlur
+    case hideStoryRings
+    case hideEmojiStatus
 }
 
 private enum KalgramProSlider: String {
@@ -295,6 +301,13 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
 
     entries.append(.header(id: id.count, section: .interface, text: "ИНТЕРФЕЙС", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .oldInterface, value: UserDefaults.standard.bool(forKey: oldInterfaceKey), text: "Старый интерфейс", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .amoled, value: KalgramTweaks.amoled, text: "AMOLED — чистый чёрный", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideSeparators, value: KalgramTweaks.hideSeparators, text: "Скрыть разделители", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .noSelectionBlur, value: KalgramTweaks.noSelectionBlur, text: "Без размытия при выборе сообщения", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .exactLastSeen, value: KalgramTweaks.exactLastSeen, text: "Точное время «был(а)»", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideStoryRings, value: KalgramTweaks.hideStoryRings, text: "Без колец историй у аватаров", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideEmojiStatus, value: KalgramTweaks.hideEmojiStatus, text: "Скрыть эмодзи-статусы в списке", enabled: true))
+    entries.append(.notice(id: id.count, section: .interface, text: "AMOLED делает чёрной любую тёмную тему и на этом экране экономит заряд. Без размытия и без анимированных статусов тоже меньше работы видеочипу. AMOLED и разделители применяются после перезапуска."))
     entries.append(.notice(id: id.count, section: .interface, text: "Как до «жидкого стекла»: плоские панели без бликов и теней, панель вкладок во всю ширину внизу экрана с подписями. Нужен перезапуск."))
 
     // kalgram: iOS's own daily report of what kalgram spent (MetricKit)
@@ -401,6 +414,20 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramTweaks.moreAutolock = value
             case .hideBlockedMessages:
                 KalgramBlockedPeers.isEnabled = value
+            case .amoled:
+                KalgramTweaks.amoled = value
+                askForRestart?()
+            case .hideSeparators:
+                KalgramTweaks.hideSeparators = value
+                askForRestart?()
+            case .exactLastSeen:
+                KalgramTweaks.exactLastSeen = value
+            case .noSelectionBlur:
+                KalgramTweaks.noSelectionBlur = value
+            case .hideStoryRings:
+                KalgramTweaks.hideStoryRings = value
+            case .hideEmojiStatus:
+                KalgramTweaks.hideEmojiStatus = value
             }
             reloadPromise.set(true)
         },

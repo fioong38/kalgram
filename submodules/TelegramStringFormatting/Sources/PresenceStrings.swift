@@ -572,6 +572,18 @@ public func stringForStoryActivityTimestamp(strings: PresentationStrings, dateTi
 }
 
 public func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: EnginePeer.Presence, relativeTo timestamp: Int32, expanded: Bool = false) -> (String, Bool) {
+    let result = kalgramUpstreamStringAndActivityForUserPresence(strings: strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: timestamp, expanded: expanded)
+    // kalgram: the exact time after "last seen"
+    if !result.1, KalgramTweaks.exactLastSeen, case let .present(statusTimestamp) = presence.status {
+        var t = time_t(statusTimestamp)
+        var timeinfo = tm()
+        localtime_r(&t, &timeinfo)
+        return (result.0 + " (" + String(format: "%02d:%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec) + ")", result.1)
+    }
+    return result
+}
+
+private func kalgramUpstreamStringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: EnginePeer.Presence, relativeTo timestamp: Int32, expanded: Bool) -> (String, Bool) {
     switch presence.status {
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {

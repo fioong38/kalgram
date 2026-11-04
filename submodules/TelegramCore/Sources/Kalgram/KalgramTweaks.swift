@@ -159,6 +159,78 @@ public enum KalgramTweaks {
         }
     }
 
+    // Any dark theme goes pure black.
+    public static let amoledKey = "kalgram.amoled"
+
+    public static var amoled: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: amoledKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: amoledKey)
+        }
+    }
+
+    // No hairlines between rows and bars.
+    public static let hideSeparatorsKey = "kalgram.hideSeparators"
+
+    public static var hideSeparators: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideSeparatorsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideSeparatorsKey)
+        }
+    }
+
+    // The exact time after "last seen".
+    public static let exactLastSeenKey = "kalgram.exactLastSeen"
+
+    public static var exactLastSeen: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: exactLastSeenKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: exactLastSeenKey)
+        }
+    }
+
+    // No blur under the message menu: cheaper for the GPU, too.
+    public static let noSelectionBlurKey = "kalgram.noSelectionBlur"
+
+    public static var noSelectionBlur: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: noSelectionBlurKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: noSelectionBlurKey)
+        }
+    }
+
+    // No story rings on chat list avatars.
+    public static let hideStoryRingsKey = "kalgram.hideStoryRings"
+
+    public static var hideStoryRings: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideStoryRingsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideStoryRingsKey)
+        }
+    }
+
+    // No emoji statuses in the chat list, which also stops them animating.
+    public static let hideEmojiStatusKey = "kalgram.hideEmojiStatus"
+
+    public static var hideEmojiStatus: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideEmojiStatusKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideEmojiStatusKey)
+        }
+    }
+
     public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
 
     public static var keepSelfDestructing: Bool {
