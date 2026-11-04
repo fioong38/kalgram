@@ -67,6 +67,7 @@ private enum KalgramProToggle: String {
     case hideGreetingSticker
     case longRecentSearch
     case moreAutolock
+    case hideBlockedMessages
 }
 
 private enum KalgramProSlider: String {
@@ -207,11 +208,12 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.notice(id: id.count, section: .sending, text: "Только для этого аккаунта. Сообщение уходит как отложенное: его доставляет сервер, а ты не появляешься «в сети», даже если приложение закрыть. До отправки оно лежит в «Отложенных», а не в чате. Не действует в «Избранном», секретных чатах, с ботами, для платных и одноразовых сообщений."))
 
     entries.append(.header(id: id.count, section: .tweaks, text: "МЕЛОЧИ", badge: nil))
+    entries.append(.toggle(id: id.count, section: .tweaks, settingName: .hideBlockedMessages, value: KalgramBlockedPeers.isEnabled, text: "Скрыть сообщения заблокированных", enabled: true))
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .revealSpoilers, value: KalgramTweaks.revealSpoilers, text: "Анти-спойлер", enabled: true))
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .hideGreetingSticker, value: KalgramTweaks.hideGreetingSticker, text: "Без приветственного стикера", enabled: true))
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .longRecentSearch, value: KalgramTweaks.longRecentSearch, text: "Длинная история поиска", enabled: true))
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .moreAutolock, value: KalgramTweaks.moreAutolock, text: "Больше вариантов автоблокировки", enabled: true))
-    entries.append(.notice(id: id.count, section: .tweaks, text: "Анти-спойлер: текст и медиа под спойлером видны сразу. История поиска: до 200 чатов вместо 20. Автоблокировка: 5 секунд, 2, 10, 15 и 30 минут, 2, 8 и 24 часа в меню кода-пароля. Без стикера приветствия он и не загружается."))
+    entries.append(.notice(id: id.count, section: .tweaks, text: "Заблокированных не видно в группах и каналах, сам чат в списке не меняется; список заблокированных обновляется раз в 30 минут и только при включённой настройке. Анти-спойлер: текст и медиа под спойлером видны сразу. История поиска: до 200 чатов вместо 20. Автоблокировка: 5 секунд, 2, 10, 15 и 30 минут, 2, 8 и 24 часа в меню кода-пароля. Без стикера приветствия он и не загружается."))
 
     entries.append(.header(id: id.count, section: .ads, text: "РЕКЛАМА", badge: nil))
     entries.append(.toggle(id: id.count, section: .ads, settingName: .adsHideSponsored, value: SGSimpleSettings.shared.kalgramHideSponsored, text: "Спонсорские сообщения", enabled: true))
@@ -397,6 +399,8 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramTweaks.longRecentSearch = value
             case .moreAutolock:
                 KalgramTweaks.moreAutolock = value
+            case .hideBlockedMessages:
+                KalgramBlockedPeers.isEnabled = value
             }
             reloadPromise.set(true)
         },

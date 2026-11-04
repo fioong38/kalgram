@@ -140,6 +140,12 @@ func chatHistoryEntriesForView(
         }
     }
     
+    // kalgram: messages of blocked users in groups and channels
+    let kalgramHidesBlocked = KalgramBlockedPeers.isEnabled
+    if kalgramHidesBlocked {
+        KalgramBlockedPeers.shared.refreshIfNeeded(account: context.account)
+    }
+
     var count = 0
     loop: for entry in view.entries {
         var message = entry.message.withAppliedEphemeralReplacementMessage()
@@ -154,6 +160,9 @@ func chatHistoryEntriesForView(
             continue
         }
         
+        if kalgramHidesBlocked && KalgramBlockedPeers.shared.isHidden(message, account: context.account) {
+            continue
+        }
         if case let .replyThread(replyThreadMessage) = location, replyThreadMessage.isForumPost {
             for media in message.media {
                 if let action = media as? TelegramMediaAction {
