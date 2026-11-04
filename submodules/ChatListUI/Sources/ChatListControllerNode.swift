@@ -1735,7 +1735,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 leftInset: layout.safeInsets.left,
                 rightInset: layout.safeInsets.right,
                 trailingButtonsInset: layout.navigationBarTrailingButtonsInset,
-                search: ChatListNavigationBar.Search(isEnabled: true),
+                search: KalgramTweaks.hideSearchField ? nil : ChatListNavigationBar.Search(isEnabled: true),
                 activeSearch: self.isSearchDisplayControllerActive,
                 primaryContent: headerContent?.primaryContent,
                 secondaryContent: headerContent?.secondaryContent,

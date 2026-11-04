@@ -74,6 +74,9 @@ private enum KalgramProToggle: String {
     case noSelectionBlur
     case hideStoryRings
     case hideEmojiStatus
+    case hideBubbleTails
+    case hideSearchField
+    case lockOnLaunch
 }
 
 private enum KalgramProSlider: String {
@@ -218,6 +221,7 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .revealSpoilers, value: KalgramTweaks.revealSpoilers, text: "Анти-спойлер", enabled: true))
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .hideGreetingSticker, value: KalgramTweaks.hideGreetingSticker, text: "Без приветственного стикера", enabled: true))
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .longRecentSearch, value: KalgramTweaks.longRecentSearch, text: "Длинная история поиска", enabled: true))
+    entries.append(.toggle(id: id.count, section: .tweaks, settingName: .lockOnLaunch, value: KalgramTweaks.lockOnLaunch, text: "Код-пароль при каждом запуске", enabled: true))
     entries.append(.toggle(id: id.count, section: .tweaks, settingName: .moreAutolock, value: KalgramTweaks.moreAutolock, text: "Больше вариантов автоблокировки", enabled: true))
     entries.append(.notice(id: id.count, section: .tweaks, text: "Заблокированных не видно в группах и каналах, сам чат в списке не меняется; список заблокированных обновляется раз в 30 минут и только при включённой настройке. Анти-спойлер: текст и медиа под спойлером видны сразу. История поиска: до 200 чатов вместо 20. Автоблокировка: 5 секунд, 2, 10, 15 и 30 минут, 2, 8 и 24 часа в меню кода-пароля. Без стикера приветствия он и не загружается."))
 
@@ -307,6 +311,8 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .interface, settingName: .exactLastSeen, value: KalgramTweaks.exactLastSeen, text: "Точное время «был(а)»", enabled: true))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .hideStoryRings, value: KalgramTweaks.hideStoryRings, text: "Без колец историй у аватаров", enabled: true))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .hideEmojiStatus, value: KalgramTweaks.hideEmojiStatus, text: "Скрыть эмодзи-статусы в списке", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideBubbleTails, value: KalgramTweaks.hideBubbleTails, text: "Пузыри без хвостиков", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideSearchField, value: KalgramTweaks.hideSearchField, text: "Скрыть поле поиска", enabled: true))
     entries.append(.notice(id: id.count, section: .interface, text: "AMOLED делает чёрной любую тёмную тему и на этом экране экономит заряд. Без размытия и без анимированных статусов тоже меньше работы видеочипу. AMOLED и разделители применяются после перезапуска."))
     entries.append(.notice(id: id.count, section: .interface, text: "Как до «жидкого стекла»: плоские панели без бликов и теней, панель вкладок во всю ширину внизу экрана с подписями. Нужен перезапуск."))
 
@@ -428,6 +434,14 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramTweaks.hideStoryRings = value
             case .hideEmojiStatus:
                 KalgramTweaks.hideEmojiStatus = value
+            case .hideBubbleTails:
+                KalgramTweaks.hideBubbleTails = value
+                askForRestart?()
+            case .hideSearchField:
+                KalgramTweaks.hideSearchField = value
+                askForRestart?()
+            case .lockOnLaunch:
+                KalgramTweaks.lockOnLaunch = value
             }
             reloadPromise.set(true)
         },

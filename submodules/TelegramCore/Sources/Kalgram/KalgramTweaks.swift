@@ -231,6 +231,42 @@ public enum KalgramTweaks {
         }
     }
 
+    // Message bubbles without the tail.
+    public static let hideBubbleTailsKey = "kalgram.hideBubbleTails"
+
+    public static var hideBubbleTails: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideBubbleTailsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideBubbleTailsKey)
+        }
+    }
+
+    // No search field above the chat list.
+    public static let hideSearchFieldKey = "kalgram.hideSearchField"
+
+    public static var hideSearchField: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideSearchFieldKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideSearchFieldKey)
+        }
+    }
+
+    // The passcode is asked on every cold start. Without a passcode set it does nothing.
+    public static let lockOnLaunchKey = "kalgram.lockOnLaunch"
+
+    public static var lockOnLaunch: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: lockOnLaunchKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: lockOnLaunchKey)
+        }
+    }
+
     public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
 
     public static var keepSelfDestructing: Bool {

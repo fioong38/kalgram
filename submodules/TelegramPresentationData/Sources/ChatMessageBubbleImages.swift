@@ -223,7 +223,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         context.addLine(to: CGPoint(x: 0.0, y: topLeftRadius))
         context.fillPath()
         
-        if drawTail {
+        if drawTail && !KalgramTweaks.hideBubbleTails {
             if maxCornerRadius >= minRadiusForFullTailCorner {
                 context.move(to: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.midY))
                 context.addQuadCurve(to: CGPoint(x: bottomEllipse.midX, y: bottomEllipse.maxY), control: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.maxY))
@@ -276,7 +276,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         context.closePath()
         context.strokePath()
         
-        if drawTail {
+        if drawTail && !KalgramTweaks.hideBubbleTails {
             let outlineBottomEllipse = bottomEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
             let outlineInnerTopEllipse = topEllipse.insetBy(dx: borderOffset, dy: borderOffset)
             

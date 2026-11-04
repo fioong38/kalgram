@@ -153,6 +153,17 @@ public final class AppLockContextImpl: AppLockContext {
             self.currentStateValue = LockState()
         }
         self.autolockTimeout.set(self.currentStateValue.autolockTimeout)
+        // kalgram: lock on every cold start, before the first lock evaluation
+        if KalgramTweaks.lockOnLaunch && !self.currentStateValue.isManuallyLocked {
+            self.currentStateValue.isManuallyLocked = true
+            let kalgramState = self.currentStateValue
+            let kalgramPath = appLockStatePath(rootPath: self.rootPath)
+            self.syncQueue.async {
+                if let data = try? JSONEncoder().encode(kalgramState) {
+                    let _ = try? data.write(to: URL(fileURLWithPath: kalgramPath), options: .atomic)
+                }
+            }
+        }
         
         self.disposable = (combineLatest(queue: .mainQueue(),
             accountManager.accessChallengeData(),
