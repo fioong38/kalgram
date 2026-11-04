@@ -52,6 +52,36 @@ public enum KalgramOutgoing {
         }
     }
 
+    // Send delay: messages go out as scheduled ones, the server delivers them and the account does
+    // not show up online. No timer runs on the phone. Separately for every account.
+    // The server sends at once anything scheduled less than ~10 s ahead, hence 12.
+    public static let sendDelayChoices: [Int32] = [12, 20, 30, 60, 180]
+
+    private static func sendDelayEnabledKey(_ accountPeerId: PeerId) -> String {
+        return "kalgram.sendDelay.\(accountPeerId.id._internalGetInt64Value()).enabled"
+    }
+
+    private static func sendDelaySecondsKey(_ accountPeerId: PeerId) -> String {
+        return "kalgram.sendDelay.\(accountPeerId.id._internalGetInt64Value()).seconds"
+    }
+
+    public static func isSendDelayEnabled(accountPeerId: PeerId) -> Bool {
+        return UserDefaults.standard.bool(forKey: sendDelayEnabledKey(accountPeerId))
+    }
+
+    public static func setSendDelayEnabled(_ value: Bool, accountPeerId: PeerId) {
+        UserDefaults.standard.set(value, forKey: sendDelayEnabledKey(accountPeerId))
+    }
+
+    public static func sendDelaySeconds(accountPeerId: PeerId) -> Int32 {
+        let value = Int32(UserDefaults.standard.integer(forKey: sendDelaySecondsKey(accountPeerId)))
+        return sendDelayChoices.contains(value) ? value : 20
+    }
+
+    public static func setSendDelaySeconds(_ value: Int32, accountPeerId: PeerId) {
+        UserDefaults.standard.set(Int(value), forKey: sendDelaySecondsKey(accountPeerId))
+    }
+
     // A new rule for a word already in the list takes its place
     public static func addRule(source: String, replacement: String) {
         let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -294,5 +324,44 @@ func kalgramApplyOutgoing(_ messages: [(Bool, EnqueueMessage)], transaction: Tra
     if hasTextRules && !isBot {
         result = result.map { ($0.0, kalgramTransformedText($0.1)) }
     }
+    if !isBot && kalgramCanDelay(result, account: account, peerId: peerId) {
+        // One time for the whole batch, so an album stays together
+        let now = account.network.globalTime
+        let base = now > 0.0 ? now : Date().timeIntervalSince1970
+        let scheduleTime = Int32(base) + KalgramOutgoing.sendDelaySeconds(accountPeerId: account.peerId)
+        result = result.map { item in
+            return (item.0, item.1.withUpdatedAttributes { attributes in
+                return attributes + [OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime, repeatPeriod: nil)]
+            })
+        }
+    }
     return result
+}
+
+private func kalgramCanDelay(_ messages: [(Bool, EnqueueMessage)], account: Account, peerId: PeerId) -> Bool {
+    if messages.isEmpty || !KalgramOutgoing.isSendDelayEnabled(accountPeerId: account.peerId) {
+        return false
+    }
+    // «Избранное» is a notebook, secret chats cannot schedule
+    if peerId == account.peerId || peerId.namespace == Namespaces.Peer.SecretChat {
+        return false
+    }
+    for (_, message) in messages {
+        // Replies to stories cannot be scheduled
+        if case let .message(_, _, _, _, _, _, replyToStoryId, _, _, _) = message, replyToStoryId != nil {
+            return false
+        }
+        for attribute in message.attributes {
+            if attribute is OutgoingScheduleInfoMessageAttribute || attribute is PaidStarsMessageAttribute {
+                return false
+            }
+            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute, attribute.timeout == viewOnceTimeout {
+                return false
+            }
+            if let attribute = attribute as? AutoclearTimeoutMessageAttribute, attribute.timeout == viewOnceTimeout {
+                return false
+            }
+        }
+    }
+    return true
 }

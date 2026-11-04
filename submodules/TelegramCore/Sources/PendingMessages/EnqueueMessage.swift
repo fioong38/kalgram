@@ -755,7 +755,7 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
                 }
             }
 
-            // kalgram: text rules
+            // kalgram: text rules and the send delay
             normalMessages = kalgramApplyOutgoing(normalMessages, transaction: transaction, account: account, peerId: peerId)
 
             if !normalMessages.isEmpty {

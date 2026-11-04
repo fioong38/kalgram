@@ -60,6 +60,7 @@ private enum KalgramProToggle: String {
     case proxyRespectVpn
     case sendingAntiCaps
     case sendingWordReplacement
+    case sendingDelay
 }
 
 private enum KalgramProSlider: String {
@@ -78,6 +79,7 @@ private enum KalgramProSelector: String {
     case backgroundMode
     case roundVideoQuality
     case studyInterval
+    case sendingDelaySeconds
 }
 
 private enum KalgramProLink: String {
@@ -192,6 +194,10 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
         sendingNotice += "\n\nПравила:\n" + sendingRules.map { "\($0.source) → \($0.replacement)" }.joined(separator: "\n")
     }
     entries.append(.notice(id: id.count, section: .sending, text: sendingNotice))
+    let sendDelayEnabled = KalgramOutgoing.isSendDelayEnabled(accountPeerId: accountPeerId)
+    entries.append(.toggle(id: id.count, section: .sending, settingName: .sendingDelay, value: sendDelayEnabled, text: "Отправлять с задержкой", enabled: true))
+    entries.append(.oneFromManySelector(id: id.count, section: .sending, settingName: .sendingDelaySeconds, text: "Задержка", value: "\(KalgramOutgoing.sendDelaySeconds(accountPeerId: accountPeerId)) с", enabled: sendDelayEnabled))
+    entries.append(.notice(id: id.count, section: .sending, text: "Только для этого аккаунта. Сообщение уходит как отложенное: его доставляет сервер, а ты не появляешься «в сети», даже если приложение закрыть. До отправки оно лежит в «Отложенных», а не в чате. Не действует в «Избранном», секретных чатах, с ботами, для платных и одноразовых сообщений."))
 
     entries.append(.header(id: id.count, section: .ads, text: "РЕКЛАМА", badge: nil))
     entries.append(.toggle(id: id.count, section: .ads, settingName: .adsHideSponsored, value: SGSimpleSettings.shared.kalgramHideSponsored, text: "Спонсорские сообщения", enabled: true))
@@ -365,6 +371,8 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramOutgoing.antiCaps = value
             case .sendingWordReplacement:
                 KalgramOutgoing.wordReplacement = value
+            case .sendingDelay:
+                KalgramOutgoing.setSendDelayEnabled(value, accountPeerId: accountPeerId)
             }
             reloadPromise.set(true)
         },
@@ -436,6 +444,23 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     items.append(ActionSheetButtonItem(title: "\(minutes) мин", color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         KalgramStudySettings.minutes = minutes
+                        reloadPromise.set(true)
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .sendingDelaySeconds:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for seconds in KalgramOutgoing.sendDelayChoices {
+                    items.append(ActionSheetButtonItem(title: "\(seconds) с", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        KalgramOutgoing.setSendDelaySeconds(seconds, accountPeerId: accountPeerId)
                         reloadPromise.set(true)
                     }))
                 }
