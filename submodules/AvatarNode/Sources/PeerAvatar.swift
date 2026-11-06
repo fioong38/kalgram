@@ -103,7 +103,7 @@ public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, forcePro
 public func peerAvatarCompleteImage(postbox: Postbox, peer: EnginePeer, forceProvidedRepresentation: Bool = false, representation: TelegramMediaImageRepresentation? = nil, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false, blurred: Bool = false) -> Signal<UIImage?, NoError> {
     let iconSignal: Signal<UIImage?, NoError>
     
-    let clipStyle: AvatarNodeClipStyle
+    var clipStyle: AvatarNodeClipStyle
     if round {
         if case let .channel(channel) = peer, channel.isForumOrMonoForum {
             clipStyle = .roundedRect
@@ -114,6 +114,7 @@ public func peerAvatarCompleteImage(postbox: Postbox, peer: EnginePeer, forcePro
         clipStyle = .none
     }
     
+    clipStyle = kalgramAvatarClipStyle(clipStyle)
     let thumbnailRepresentation: TelegramMediaImageRepresentation?
     if forceProvidedRepresentation {
         thumbnailRepresentation = representation

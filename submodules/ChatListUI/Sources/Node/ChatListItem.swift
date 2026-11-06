@@ -463,6 +463,14 @@ private final class ChatListItemTagListComponent: Component {
     }
 }
 
+private func kalgramChatListCheckColor(read: Bool, theme: PresentationTheme) -> UIColor {
+    let rgb = read ? KalgramTweaks.readCheckColor : KalgramTweaks.sentCheckColor
+    if KalgramTweaks.checkColorsInChatList && rgb != 0 {
+        return UIColor(rgb: UInt32(rgb))
+    }
+    return theme.chatList.checkmarkColor
+}
+
 private func kalgramHidesChatListRow(_ item: ChatListItem) -> Bool {
     guard case let .peer(peerData) = item.content else {
         return false
@@ -3425,15 +3433,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         if let forumTopicData = forumTopicData {
                             if message.id.namespace == forumTopicData.maxOutgoingReadMessageId.namespace, message.id.id >= forumTopicData.maxOutgoingReadMessageId.id {
-                                statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
+                                statusState = .read(kalgramChatListCheckColor(read: true, theme: item.presentationData.theme))
                             } else {
-                                statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                                statusState = .delivered(kalgramChatListCheckColor(read: false, theme: item.presentationData.theme))
                             }
                         } else {
                             if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
-                                statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
+                                statusState = .read(kalgramChatListCheckColor(read: true, theme: item.presentationData.theme))
                             } else {
-                                statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                                statusState = .delivered(kalgramChatListCheckColor(read: false, theme: item.presentationData.theme))
                             }
                         }
                     }
@@ -3855,6 +3863,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 textMaxWidth -= 18.0
             }
             
+            // kalgram: no message text in the list
+            if KalgramTweaks.hideChatPreview {
+                textAttributedString = NSAttributedString(string: "")
+            }
             // kalgram: a protected chat shows no text
             if kalgramHidesChatListRow(item) {
                 textAttributedString = NSAttributedString(string: "🔒 Чат защищён", font: Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0)), textColor: theme.messageTextColor)

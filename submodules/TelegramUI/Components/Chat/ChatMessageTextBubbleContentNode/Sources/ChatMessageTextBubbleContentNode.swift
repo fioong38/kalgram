@@ -441,6 +441,18 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 
+                // kalgram: plain text, links and emoji stay
+                if (incoming ? KalgramTweaks.hideFormattingIncoming : KalgramTweaks.hideFormattingOutgoing), let entities = messageEntities {
+                    messageEntities = entities.filter { entity in
+                        switch entity.type {
+                        case .Bold, .Italic, .Code, .Pre, .Underline, .Strikethrough, .BlockQuote:
+                            return false
+                        default:
+                            return true
+                        }
+                    }
+                }
+
                 // kalgram: anti-spoiler
                 if KalgramTweaks.revealSpoilers, let entities = messageEntities {
                     messageEntities = entities.filter { entity in

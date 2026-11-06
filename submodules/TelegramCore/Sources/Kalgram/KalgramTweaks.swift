@@ -267,6 +267,174 @@ public enum KalgramTweaks {
         }
     }
 
+    // Avatars with rounded corners instead of circles.
+    public static let squareAvatarsKey = "kalgram.squareAvatars"
+
+    public static var squareAvatars: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: squareAvatarsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: squareAvatarsKey)
+        }
+    }
+
+    // No "edited" next to the time.
+    public static let hideEditedMarkKey = "kalgram.hideEditedMark"
+
+    public static var hideEditedMark: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideEditedMarkKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideEditedMarkKey)
+        }
+    }
+
+    // No time on messages.
+    public static let hideMessageTimeKey = "kalgram.hideMessageTime"
+
+    public static var hideMessageTime: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideMessageTimeKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideMessageTimeKey)
+        }
+    }
+
+    // No view counts on channel posts.
+    public static let hideViewCountsKey = "kalgram.hideViewCounts"
+
+    public static var hideViewCounts: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideViewCountsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideViewCountsKey)
+        }
+    }
+
+    // No comment buttons under channel posts.
+    public static let hideChannelCommentsKey = "kalgram.hideChannelComments"
+
+    public static var hideChannelComments: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideChannelCommentsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideChannelCommentsKey)
+        }
+    }
+
+    // Incoming messages as plain text, links and emoji stay.
+    public static let hideFormattingIncomingKey = "kalgram.hideFormattingIncoming"
+
+    public static var hideFormattingIncoming: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideFormattingIncomingKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideFormattingIncomingKey)
+        }
+    }
+
+    // Own messages as plain text, links and emoji stay.
+    public static let hideFormattingOutgoingKey = "kalgram.hideFormattingOutgoing"
+
+    public static var hideFormattingOutgoing: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideFormattingOutgoingKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideFormattingOutgoingKey)
+        }
+    }
+
+    // The chat list shows no message text.
+    public static let hideChatPreviewKey = "kalgram.hideChatPreview"
+
+    public static var hideChatPreview: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideChatPreviewKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideChatPreviewKey)
+        }
+    }
+
+    // The chat list title stays while connecting.
+    public static let hideConnectionTextKey = "kalgram.hideConnectionText"
+
+    public static var hideConnectionText: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideConnectionTextKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideConnectionTextKey)
+        }
+    }
+
+    // No channel pinned by an MTProxy.
+    public static let hideProxySponsorKey = "kalgram.hideProxySponsor"
+
+    public static var hideProxySponsor: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideProxySponsorKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideProxySponsorKey)
+        }
+    }
+
+    // A numeric query finds peers this device knows by their id.
+    public static let searchByIdKey = "kalgram.searchById"
+
+    public static var searchById: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: searchByIdKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: searchByIdKey)
+        }
+    }
+
+    // The chosen checkmark colors in the chat list too.
+    public static let checkColorsInChatListKey = "kalgram.checkColorsInChatList"
+
+    public static var checkColorsInChatList: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: checkColorsInChatListKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: checkColorsInChatListKey)
+        }
+    }
+
+    // The "read" checkmarks. 0 keeps the theme's color.
+    public static let readCheckColorKey = "kalgram.readCheckColor"
+
+    public static var readCheckColor: Int {
+        get {
+            return UserDefaults.standard.integer(forKey: readCheckColorKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: readCheckColorKey)
+        }
+    }
+
+    // The "delivered" checkmark. 0 keeps the theme's color.
+    public static let sentCheckColorKey = "kalgram.sentCheckColor"
+
+    public static var sentCheckColor: Int {
+        get {
+            return UserDefaults.standard.integer(forKey: sentCheckColorKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: sentCheckColorKey)
+        }
+    }
+
     public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
 
     public static var keepSelfDestructing: Bool {

@@ -78,3 +78,27 @@ func kalgramRefreshSecretFolderMembers(context: AccountContext) {
         KalgramChatLockSettings.setSecretFolderPeers(peers, accountPeerId: accountPeerId)
     })
 }
+
+// A numeric query also finds peers this device already knows by their public id: 123456789 is a user,
+// -1001234567890 a channel or supergroup, -123456789 a legacy group. The server cannot look up a bare
+// id, it needs an access hash.
+func kalgramSearchById(_ signal: Signal<[EngineRenderedPeer], NoError>, query: String, context: AccountContext) -> Signal<[EngineRenderedPeer], NoError> {
+    guard KalgramTweaks.searchById, let raw = Int64(query.trimmingCharacters(in: .whitespacesAndNewlines)), raw != 0 else {
+        return signal
+    }
+    let peerId: EnginePeer.Id
+    if raw > 0 {
+        peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(raw))
+    } else if raw <= -1_000_000_000_000 {
+        peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(-raw - 1_000_000_000_000))
+    } else {
+        peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(-raw))
+    }
+    return combineLatest(signal, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
+    |> map { found, peer -> [EngineRenderedPeer] in
+        guard let peer else {
+            return found
+        }
+        return [EngineRenderedPeer(peer: peer)] + found.filter { $0.peerId != peer.id }
+    }
+}

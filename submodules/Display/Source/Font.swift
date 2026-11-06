@@ -160,6 +160,10 @@ public struct Font {
     private static let cache = Cache()
     
     public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, width: Width = .standard, traits: Traits = []) -> UIFont {
+        // kalgram: the chosen font, except for what must stay monospaced or italic
+        if case .regular = design, traits.isEmpty, let font = kalgramSubstituteFont(size: size, weight: weight.weight) {
+            return font
+        }
         let key = "\(size)_\(design.key)_\(weight.key)_\(width.key)_\(traits.rawValue)"
         
         if let cachedFont = self.cache.get(key) {
@@ -289,18 +293,30 @@ public struct Font {
     }
     
     public static func regular(_ size: CGFloat) -> UIFont {
+        if let font = kalgramSubstituteFont(size: size, weight: .regular) {
+            return font
+        }
         return UIFont.systemFont(ofSize: size)
     }
     
     public static func medium(_ size: CGFloat) -> UIFont {
+        if let font = kalgramSubstituteFont(size: size, weight: .medium) {
+            return font
+        }
         return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.medium)
     }
     
     public static func semibold(_ size: CGFloat) -> UIFont {
+        if let font = kalgramSubstituteFont(size: size, weight: .semibold) {
+            return font
+        }
         return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.semibold)
     }
     
     public static func bold(_ size: CGFloat) -> UIFont {
+        if let font = kalgramSubstituteFont(size: size, weight: .bold) {
+            return font
+        }
         if #available(iOS 8.2, *) {
             return UIFont.boldSystemFont(ofSize: size)
         } else {
@@ -309,10 +325,16 @@ public struct Font {
     }
     
     public static func heavy(_ size: CGFloat) -> UIFont {
+        if let font = kalgramSubstituteFont(size: size, weight: .heavy) {
+            return font
+        }
         return self.with(size: size, design: .regular, weight: .heavy, traits: [])
     }
     
     public static func light(_ size: CGFloat) -> UIFont {
+        if let font = kalgramSubstituteFont(size: size, weight: .light) {
+            return font
+        }
         return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.light)
     }
     

@@ -142,6 +142,9 @@ public protocol ChatMessageItem: ListViewItem, ChatHistoryItemWithHeaders {
 }
 
 public func hasCommentButton(item: ChatMessageItem) -> Bool {
+    if KalgramTweaks.hideChannelComments {
+        return false
+    }
     let firstMessage = item.content.firstMessage
     
     var hasDiscussion = false

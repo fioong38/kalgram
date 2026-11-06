@@ -339,7 +339,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 avatarCornerRadius = floor(avatarSize * 0.25)
                 isForum = true
             } else {
-                avatarCornerRadius = avatarSize / 2.0
+                avatarCornerRadius = KalgramTweaks.squareAvatars ? floor(avatarSize * 0.25) : avatarSize / 2.0
             }
             self.cornerFraction = isForum ? 0.25 : 0.5
             if self.avatarNode.layer.cornerRadius != 0.0 {

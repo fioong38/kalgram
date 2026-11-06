@@ -498,6 +498,14 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 leftInset = 5.0
                 loadedCheckFullImage = PresentationResourcesChat.chatOutgoingFullCheck(arguments.presentationData.theme.theme, size: checkSize)
                 loadedCheckPartialImage = PresentationResourcesChat.chatOutgoingPartialCheck(arguments.presentationData.theme.theme, size: checkSize)
+                // kalgram: the chosen checkmark colors, read and delivered apart
+                if case let .Sent(read) = status {
+                    let kalgramColor = read ? KalgramTweaks.readCheckColor : KalgramTweaks.sentCheckColor
+                    if kalgramColor != 0 {
+                        loadedCheckFullImage = kalgramTintedCheck(loadedCheckFullImage, rgb: kalgramColor, partial: false, size: checkSize)
+                        loadedCheckPartialImage = kalgramTintedCheck(loadedCheckPartialImage, rgb: kalgramColor, partial: true, size: checkSize)
+                    }
+                }
                 clockFrameImage = graphics.clockBubbleOutgoingFrameImage
                 clockMinImage = graphics.clockBubbleOutgoingMinImage
                 if arguments.impressionCount != nil {
@@ -1491,6 +1499,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
     public static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ arguments: Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)) {
         let currentLayout = node?.asyncLayout()
         return { arguments in
+            let arguments = kalgramStatusArguments(arguments)
             let resultNode: ChatMessageDateAndStatusNode
             let resultSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))
             if let node = node, let currentLayout = currentLayout {
@@ -1549,4 +1558,51 @@ public func shouldDisplayInlineDateReactions(message: EngineMessage, isPremium: 
     // MARK: Swiftgram
     // With 10.13 it now hides reactions in favor of message effect badge
     return SGSimpleSettings.shared.hideReactions
+}
+
+// kalgram: the status line options, read once per layout of the line
+private func kalgramStatusArguments(_ arguments: ChatMessageDateAndStatusNode.Arguments) -> ChatMessageDateAndStatusNode.Arguments {
+    if !KalgramTweaks.hideEditedMark && !KalgramTweaks.hideMessageTime && !KalgramTweaks.hideViewCounts && !KalgramTweaks.hideChannelComments {
+        return arguments
+    }
+    var arguments = arguments
+    if KalgramTweaks.hideEditedMark {
+        arguments.edited = false
+    }
+    if KalgramTweaks.hideMessageTime {
+        // kalgram's "deleted" mark is not the time and stays
+        arguments.dateText = arguments.dateText.hasPrefix("удалено") ? "удалено" : ""
+    }
+    if KalgramTweaks.hideViewCounts {
+        arguments.impressionCount = nil
+    }
+    if KalgramTweaks.hideChannelComments {
+        arguments.replyCount = 0
+    }
+    return arguments
+}
+
+private struct KalgramCheckKey: Hashable {
+    let rgb: Int
+    let partial: Bool
+    let size: CGFloat
+}
+
+// Drawn once per color and size: this runs for every message on screen
+private let kalgramCheckCache = Atomic<[KalgramCheckKey: UIImage]>(value: [:])
+
+private func kalgramTintedCheck(_ image: UIImage?, rgb: Int, partial: Bool, size: CGFloat) -> UIImage? {
+    let key = KalgramCheckKey(rgb: rgb, partial: partial, size: size)
+    if let cached = kalgramCheckCache.with({ $0[key] }) {
+        return cached
+    }
+    guard let tinted = generateTintedImage(image: image, color: UIColor(rgb: UInt32(rgb))) else {
+        return image
+    }
+    let _ = kalgramCheckCache.modify { current in
+        var current = current
+        current[key] = tinted
+        return current
+    }
+    return tinted
 }

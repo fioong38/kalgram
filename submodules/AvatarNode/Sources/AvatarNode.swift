@@ -35,6 +35,14 @@ public func generateDeletedAccountAvatarImage(size: CGSize) -> UIImage? {
     return generateAvatarImage(size: size, icon: deletedIcon, iconScale: size.width / 60.0, color: .blue, customColors: AvatarNode.grayscaleColors)
 }
 
+// kalgram: every avatar that would be a circle gets rounded corners
+public func kalgramAvatarClipStyle(_ style: AvatarNodeClipStyle) -> AvatarNodeClipStyle {
+    if case .round = style, KalgramTweaks.squareAvatars {
+        return .roundedRect
+    }
+    return style
+}
+
 public enum AvatarNodeClipStyle {
     case none
     case round
@@ -65,7 +73,7 @@ private class AvatarNodeParameters: NSObject {
         self.icon = icon
         self.explicitColorIndex = explicitColorIndex
         self.hasImage = hasImage
-        self.clipStyle = clipStyle
+        self.clipStyle = kalgramAvatarClipStyle(clipStyle)
         self.cutoutRect = cutoutRect
         
         super.init()
@@ -595,6 +603,7 @@ public final class AvatarNode: ASDisplayNode {
             storeUnrounded: Bool = false,
             cutoutRect: CGRect? = nil
         ) {
+            let clipStyle = kalgramAvatarClipStyle(clipStyle)
             var synchronousLoad = synchronousLoad
             var representation: TelegramMediaImageRepresentation?
             var icon = AvatarNodeIcon.none
@@ -723,6 +732,7 @@ public final class AvatarNode: ASDisplayNode {
             displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0),
             storeUnrounded: Bool = false
         ) {
+            let clipStyle = kalgramAvatarClipStyle(clipStyle)
             let smallProfileImage = peer?.smallProfileImage
             let params = Params(
                 peerId: peer?.id,
@@ -802,6 +812,7 @@ public final class AvatarNode: ASDisplayNode {
             storeUnrounded: Bool = false,
             cutoutRect: CGRect? = nil
         ) {
+            let clipStyle = kalgramAvatarClipStyle(clipStyle)
             var synchronousLoad = synchronousLoad
             var representation: TelegramMediaImageRepresentation?
             var icon = AvatarNodeIcon.none

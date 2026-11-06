@@ -68,6 +68,19 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
     public var manualLayout: Bool = false
     
     private var _title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
+    // kalgram: while connecting, the title stays as it was instead of "Соединение…"
+    private var kalgramIdleTitle: String?
+    private var kalgramTitleText: String {
+        if !self.title.activity {
+            self.kalgramIdleTitle = self.title.text
+            return self.title.text
+        }
+        if KalgramTweaks.hideConnectionText, let idleTitle = self.kalgramIdleTitle {
+            return idleTitle
+        }
+        return self.title.text
+    }
+
     public var title: NetworkStatusTitle {
         get {
             return self._title
@@ -82,7 +95,7 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         self._title = title
         
         if self._title != oldValue {
-            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.kalgramTitleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
             self.buttonView.accessibilityLabel = self.title.text
             self.activityIndicator.isHidden = !self.title.activity
            
@@ -211,7 +224,7 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
     public var theme: PresentationTheme {
         didSet {
             if self.theme !== oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: self.kalgramTitleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 
                 self.lockView.updateTheme(self.theme)
                 

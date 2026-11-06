@@ -651,6 +651,10 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     }
     
     let filteredAdditionalItemEntries = view.additionalItems.filter { item -> Bool in
+        // kalgram: no channel pinned by an MTProxy
+        if KalgramTweaks.hideProxySponsor, case .proxy = item.promoInfo.content {
+            return false
+        }
         return item.item.renderedPeer.peerId != state.hiddenPsaPeerId
     }
     

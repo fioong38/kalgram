@@ -2411,7 +2411,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
 
                     foundLocalPeers = combineLatest(
-                        updatedLocalPeers,
+                        kalgramSearchById(updatedLocalPeers, query: query, context: context),
                         fixedOrRemovedRecentlySearchedPeers
                     )
                     |> mapToSignal { local, allRecentlySearched -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: TelegramEngine.EngineData.Item.Messages.PeerUnreadState.Result], [EngineRenderedPeer], Set<EnginePeer.Id>, EngineGlobalNotificationSettings), NoError> in

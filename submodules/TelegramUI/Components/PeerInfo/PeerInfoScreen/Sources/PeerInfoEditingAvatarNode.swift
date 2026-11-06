@@ -93,7 +93,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             isForum = true
             avatarCornerRadius = floor(avatarSize * 0.25)
         } else {
-            avatarCornerRadius = avatarSize / 2.0
+            avatarCornerRadius = KalgramTweaks.squareAvatars ? floor(avatarSize * 0.25) : avatarSize / 2.0
         }
         if self.avatarNode.layer.cornerRadius != 0.0 {
             ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
