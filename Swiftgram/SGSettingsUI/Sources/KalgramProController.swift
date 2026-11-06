@@ -178,6 +178,22 @@ private func roundVideoQualityTitle(_ quality: String) -> String {
     }
 }
 
+// A change that weakens protection asks first, a change that strengthens it does not. Without this an
+// unlocked phone in someone else's hands could switch protection off from here.
+private func kalgramChangeSecurity(weakens: Bool, reload: @escaping () -> Void, apply: @escaping () -> Void) {
+    if !weakens {
+        apply()
+        reload()
+        return
+    }
+    KalgramLocalAuth.authenticate(reason: "Изменить настройки безопасности", completion: { granted in
+        if granted {
+            apply()
+        }
+        reload()
+    })
+}
+
 private func chatLockTimeoutTitle(_ seconds: Int32) -> String {
     if seconds <= 0 {
         return "Сразу (и закрыть чат)"
@@ -504,13 +520,22 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     })
                 }
             case .chatLockAllChats:
-                KalgramChatLockSettings.allChats = value
+                kalgramChangeSecurity(weakens: !value, reload: { reloadPromise.set(true) }, apply: {
+                    KalgramChatLockSettings.allChats = value
+                })
             case .chatLockAutolock:
-                KalgramChatLockSettings.autolock = value
+                // With autolock one check opens every protected chat, so turning it on weakens the lock
+                kalgramChangeSecurity(weakens: value, reload: { reloadPromise.set(true) }, apply: {
+                    KalgramChatLockSettings.autolock = value
+                })
             case .screenshotPrivacy:
-                KalgramChatLockSettings.screenshotPrivacy = value
+                kalgramChangeSecurity(weakens: !value, reload: { reloadPromise.set(true) }, apply: {
+                    KalgramChatLockSettings.screenshotPrivacy = value
+                })
             case .screenshotPrivacyChatList:
-                KalgramChatLockSettings.screenshotPrivacyChatList = value
+                kalgramChangeSecurity(weakens: !value, reload: { reloadPromise.set(true) }, apply: {
+                    KalgramChatLockSettings.screenshotPrivacyChatList = value
+                })
             case .accountSwitchAuth:
                 if value {
                     KalgramChatLockSettings.accountSwitchAuth = true
@@ -523,7 +548,9 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     })
                 }
             case .secretFolderProtects:
-                KalgramChatLockSettings.setSecretFolderProtectsChats(value, accountPeerId: accountPeerId)
+                kalgramChangeSecurity(weakens: !value, reload: { reloadPromise.set(true) }, apply: {
+                    KalgramChatLockSettings.setSecretFolderProtectsChats(value, accountPeerId: accountPeerId)
+                })
             }
             reloadPromise.set(true)
         },
@@ -611,8 +638,10 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 for seconds in KalgramChatLockSettings.autolockChoices {
                     items.append(ActionSheetButtonItem(title: chatLockTimeoutTitle(seconds), color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        KalgramChatLockSettings.autolockSeconds = seconds
-                        reloadPromise.set(true)
+                        // A longer timer keeps protected chats open for longer
+                        kalgramChangeSecurity(weakens: seconds > KalgramChatLockSettings.autolockSeconds, reload: { reloadPromise.set(true) }, apply: {
+                            KalgramChatLockSettings.autolockSeconds = seconds
+                        })
                     }))
                 }
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
