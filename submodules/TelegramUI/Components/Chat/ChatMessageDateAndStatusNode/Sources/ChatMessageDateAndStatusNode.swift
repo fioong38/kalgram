@@ -496,16 +496,15 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 dateColor = arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                 outgoingStatus = status
                 leftInset = 5.0
-                loadedCheckFullImage = PresentationResourcesChat.chatOutgoingFullCheck(arguments.presentationData.theme.theme, size: checkSize)
-                loadedCheckPartialImage = PresentationResourcesChat.chatOutgoingPartialCheck(arguments.presentationData.theme.theme, size: checkSize)
                 // kalgram: the chosen checkmark colors, read and delivered apart
+                var kalgramColor = 0
                 if case let .Sent(read) = status {
-                    let kalgramColor = read ? KalgramTweaks.readCheckColor : KalgramTweaks.sentCheckColor
-                    if kalgramColor != 0 {
-                        loadedCheckFullImage = kalgramTintedCheck(loadedCheckFullImage, rgb: kalgramColor, partial: false, size: checkSize)
-                        loadedCheckPartialImage = kalgramTintedCheck(loadedCheckPartialImage, rgb: kalgramColor, partial: true, size: checkSize)
-                    }
+                    kalgramColor = read ? KalgramTweaks.readCheckColor : KalgramTweaks.sentCheckColor
                 }
+                let kalgramFullCheck = PresentationResourcesChat.chatOutgoingFullCheck(arguments.presentationData.theme.theme, size: checkSize)
+                let kalgramPartialCheck = PresentationResourcesChat.chatOutgoingPartialCheck(arguments.presentationData.theme.theme, size: checkSize)
+                loadedCheckFullImage = kalgramColor != 0 ? kalgramTintedCheck(kalgramFullCheck, rgb: kalgramColor, partial: false, size: checkSize) : kalgramFullCheck
+                loadedCheckPartialImage = kalgramColor != 0 ? kalgramTintedCheck(kalgramPartialCheck, rgb: kalgramColor, partial: true, size: checkSize) : kalgramPartialCheck
                 clockFrameImage = graphics.clockBubbleOutgoingFrameImage
                 clockMinImage = graphics.clockBubbleOutgoingMinImage
                 if arguments.impressionCount != nil {
