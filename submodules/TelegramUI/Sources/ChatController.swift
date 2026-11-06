@@ -1,4 +1,5 @@
 import SGSimpleSettings
+import SGSettingsUI
 import Foundation
 import UIKit
 import Postbox
@@ -7768,8 +7769,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    private var kalgramIsPreview: Bool {
+        if case .standard(.previewing) = self.presentationInterfaceState.mode {
+            return true
+        }
+        return false
+    }
+
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // kalgram: a chat reached in any other way than navigateToChatController is covered
+        KalgramChatLock.shared.screenEvent(.willAppear, controller: self, context: self.context, peerId: self.chatLocation.peerId, isPreview: self.kalgramIsPreview)
 
         self.walletTransferAnimationsVisible = true
         self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemNode in
@@ -7942,6 +7952,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        KalgramChatLock.shared.screenEvent(.didAppear, controller: self, context: self.context, peerId: self.chatLocation.peerId, isPreview: self.kalgramIsPreview)
         
         self.didAppear = true
         

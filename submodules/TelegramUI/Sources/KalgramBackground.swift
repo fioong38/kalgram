@@ -229,7 +229,8 @@ final class KalgramBackgroundNotifier {
 
         let content = UNMutableNotificationContent()
         content.title = chatPeer.displayTitle(strings: strings, displayOrder: nameOrder)
-        content.body = body
+        // kalgram: the text of a protected chat stays out of notifications
+        content.body = KalgramChatLockSettings.hidesContent(accountPeerId: context.account.peerId, peerId: message.id.peerId) ? "Новое сообщение" : body
         content.sound = .default
         content.threadIdentifier = "\(message.id.peerId.toInt64())"
         var userInfo: [AnyHashable: Any] = [

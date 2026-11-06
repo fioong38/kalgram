@@ -1,4 +1,5 @@
 import SGSimpleSettings // MARK: Swiftgram
+import SGSettingsUI
 import Foundation
 import UIKit
 import Display
@@ -1351,6 +1352,27 @@ extension PeerInfoScreenNode {
                     }
                 }
                 
+                // kalgram: protect or unprotect this chat; taking protection off asks first
+                if KalgramChatLockSettings.isEnabled && !KalgramChatLockSettings.allChats && strongSelf.peerId != strongSelf.context.account.peerId && KalgramChatLockSettings.isLockable(strongSelf.peerId) {
+                    let kalgramAccountPeerId = strongSelf.context.account.peerId
+                    let kalgramPeerId = strongSelf.peerId
+                    let kalgramIsProtected = KalgramChatLockSettings.isInProtectedList(peerId: kalgramPeerId, accountPeerId: kalgramAccountPeerId)
+                    items.append(.action(ContextMenuActionItem(text: kalgramIsProtected ? "Снять защиту чата" : "Защитить чат паролем", icon: { theme in
+                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Lock"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, f in
+                        f(.default)
+                        if kalgramIsProtected {
+                            KalgramLocalAuth.authenticate(reason: "Изменить настройки безопасности", completion: { granted in
+                                if granted {
+                                    KalgramChatLockSettings.setInProtectedList(false, peerId: kalgramPeerId, accountPeerId: kalgramAccountPeerId)
+                                }
+                            })
+                        } else {
+                            KalgramChatLockSettings.setInProtectedList(true, peerId: kalgramPeerId, accountPeerId: kalgramAccountPeerId)
+                        }
+                    })))
+                }
+
                 return .single(items)
             }
             

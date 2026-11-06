@@ -418,6 +418,10 @@ final class AuthorizedApplicationContext {
                                 return
                             }
                             
+                            // kalgram: no banner for a protected chat
+                            if KalgramChatLockSettings.hidesContent(accountPeerId: strongSelf.context.account.peerId, peerId: firstMessage.id.peerId) {
+                                return
+                            }
                             if firstMessage.restrictionReason(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) != nil {
                                 return
                             }

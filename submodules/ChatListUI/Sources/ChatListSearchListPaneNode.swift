@@ -3431,6 +3431,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     continue
                                 }
                                 existingMessageIds.insert(message.id)
+                                // kalgram: messages of protected chats stay out of search
+                                if KalgramChatLockSettings.hidesContent(accountPeerId: context.account.peerId, peerId: message.id.peerId) {
+                                    continue
+                                }
 
                                 if searchState.deletedMessageIds.contains(message.id) {
                                     continue

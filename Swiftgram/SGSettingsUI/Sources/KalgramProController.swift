@@ -21,6 +21,7 @@ private enum KalgramProSection: Int32, SGItemListSection {
     case ghostPermanent
     case history
     case protection
+    case security
     case sending
     case tweaks
     case background
@@ -77,6 +78,13 @@ private enum KalgramProToggle: String {
     case hideBubbleTails
     case hideSearchField
     case lockOnLaunch
+    case chatLockEnabled
+    case chatLockAllChats
+    case chatLockAutolock
+    case screenshotPrivacy
+    case screenshotPrivacyChatList
+    case accountSwitchAuth
+    case secretFolderProtects
 }
 
 private enum KalgramProSlider: String {
@@ -96,6 +104,8 @@ private enum KalgramProSelector: String {
     case roundVideoQuality
     case studyInterval
     case sendingDelaySeconds
+    case chatLockTimeout
+    case secretFolder
 }
 
 private enum KalgramProLink: String {
@@ -105,6 +115,8 @@ private enum KalgramProLink: String {
     case effectRemoveImages
     case sendingAddRule
     case sendingRemoveRules
+    case chatLockClear
+    case secretFolderOpen
 }
 
 private enum KalgramProAction: Hashable {
@@ -166,6 +178,18 @@ private func roundVideoQualityTitle(_ quality: String) -> String {
     }
 }
 
+private func chatLockTimeoutTitle(_ seconds: Int32) -> String {
+    if seconds <= 0 {
+        return "Сразу (и закрыть чат)"
+    } else if seconds < 60 {
+        return "\(seconds) с"
+    } else if seconds < 60 * 60 {
+        return "\(seconds / 60) мин"
+    } else {
+        return "\(seconds / (60 * 60)) ч"
+    }
+}
+
 private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String, state: KalgramProState) -> [KalgramProEntry] {
     var entries: [KalgramProEntry] = []
     let id = SGItemListCounter()
@@ -197,6 +221,30 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .protection, settingName: .keepSelfDestructing, value: KalgramTweaks.keepSelfDestructing, text: "Сохранять одноразки", enabled: true))
     entries.append(.toggle(id: id.count, section: .protection, settingName: .bypassIosRestrictions, value: KalgramTweaks.bypassIosRestrictions, text: "Открывать каналы, скрытые на iOS", enabled: true))
     entries.append(.notice(id: id.count, section: .protection, text: "Одноразки не исчезают, и отправитель не видит, что ты открыл. Отметить просмотренной: долгий тап по сообщению → «🔥 Сжечь». Каналы с пометкой «нарушал правила App Store» открываются; блокировки по закону остаются."))
+
+    let chatLockEnabled = KalgramChatLockSettings.isEnabled
+    let protectedCount = KalgramChatLockSettings.protectedPeerCount(accountPeerId: accountPeerId)
+    let secretFolderId = KalgramChatLockSettings.secretFolderId(accountPeerId: accountPeerId)
+    entries.append(.header(id: id.count, section: .security, text: "🔐 ЗАЩИТА ЧАТОВ", badge: nil))
+    entries.append(.toggle(id: id.count, section: .security, settingName: .chatLockEnabled, value: chatLockEnabled, text: "Пароль на чаты", enabled: true))
+    entries.append(.toggle(id: id.count, section: .security, settingName: .chatLockAllChats, value: KalgramChatLockSettings.allChats, text: "Все чаты", enabled: chatLockEnabled))
+    entries.append(.toggle(id: id.count, section: .security, settingName: .chatLockAutolock, value: KalgramChatLockSettings.autolock, text: "Автоблокировка", enabled: chatLockEnabled))
+    entries.append(.oneFromManySelector(id: id.count, section: .security, settingName: .chatLockTimeout, text: "Таймер автоблокировки", value: chatLockTimeoutTitle(KalgramChatLockSettings.autolockSeconds), enabled: chatLockEnabled && KalgramChatLockSettings.autolock))
+    if protectedCount > 0 {
+        entries.append(.disclosure(id: id.count, section: .security, link: .chatLockClear, text: "Снять защиту со всех (\(protectedCount))"))
+    }
+    entries.append(.notice(id: id.count, section: .security, text: "Face ID, Touch ID или код iPhone перед открытием чата. Чат защищается в его профиле: «…» → «Защитить чат паролем». Без автоблокировки чат запирается, как только ты из него вышел; с ней одна проверка открывает все защищённые чаты, пока приложение не пробудет в фоне дольше таймера. Текст защищённых чатов не видно в списке, поиске, баннерах и уведомлениях kalgram. Сервер уведомлений на VPS про защиту не знает: его текст настраивается там отдельно."))
+    entries.append(.toggle(id: id.count, section: .security, settingName: .accountSwitchAuth, value: KalgramChatLockSettings.accountSwitchAuth, text: "Face ID при смене аккаунта", enabled: true))
+    entries.append(.toggle(id: id.count, section: .security, settingName: .screenshotPrivacy, value: KalgramChatLockSettings.screenshotPrivacy, text: "Скрывать чат на скриншотах", enabled: true))
+    entries.append(.toggle(id: id.count, section: .security, settingName: .screenshotPrivacyChatList, value: KalgramChatLockSettings.screenshotPrivacyChatList, text: "И список чатов", enabled: KalgramChatLockSettings.screenshotPrivacy))
+    entries.append(.notice(id: id.count, section: .security, text: "На скриншотах и записи экрана пустыми выходят шапка чата, поле ввода и панели, сами сообщения остаются."))
+    entries.append(.header(id: id.count, section: .security, text: "СЕКРЕТНАЯ ПАПКА", badge: nil))
+    entries.append(.oneFromManySelector(id: id.count, section: .security, settingName: .secretFolder, text: "Какая папка", value: secretFolderId == 0 ? "Нет" : "Выбрана", enabled: true))
+    entries.append(.toggle(id: id.count, section: .security, settingName: .secretFolderProtects, value: KalgramChatLockSettings.secretFolderProtectsChats(accountPeerId: accountPeerId), text: "Защищать чаты папки", enabled: secretFolderId != 0))
+    if secretFolderId != 0 {
+        entries.append(.disclosure(id: id.count, section: .security, link: .secretFolderOpen, text: "Открыть секретную папку"))
+    }
+    entries.append(.notice(id: id.count, section: .security, text: "Запертая папка пропадает из вкладок и выбора папок. Открывается только отсюда и запирается при сворачивании приложения. У каждого аккаунта своя."))
 
     let sendingRules = KalgramOutgoing.rules
     entries.append(.header(id: id.count, section: .sending, text: "ОТПРАВКА", badge: nil))
@@ -330,6 +378,7 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
 public func kalgramProController(context: AccountContext) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var openFolderImpl: ((Int32) -> Void)?
     var askForRestart: (() -> Void)?
     var showToast: ((String) -> Void)?
 
@@ -442,6 +491,39 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 askForRestart?()
             case .lockOnLaunch:
                 KalgramTweaks.lockOnLaunch = value
+            case .chatLockEnabled:
+                if value {
+                    KalgramChatLockSettings.isEnabled = true
+                } else {
+                    // Turning protection off is what an intruder would do: ask first
+                    KalgramLocalAuth.authenticate(reason: "Изменить настройки безопасности", completion: { granted in
+                        if granted {
+                            KalgramChatLockSettings.isEnabled = false
+                        }
+                        reloadPromise.set(true)
+                    })
+                }
+            case .chatLockAllChats:
+                KalgramChatLockSettings.allChats = value
+            case .chatLockAutolock:
+                KalgramChatLockSettings.autolock = value
+            case .screenshotPrivacy:
+                KalgramChatLockSettings.screenshotPrivacy = value
+            case .screenshotPrivacyChatList:
+                KalgramChatLockSettings.screenshotPrivacyChatList = value
+            case .accountSwitchAuth:
+                if value {
+                    KalgramChatLockSettings.accountSwitchAuth = true
+                } else {
+                    KalgramLocalAuth.authenticate(reason: "Изменить настройки безопасности", completion: { granted in
+                        if granted {
+                            KalgramChatLockSettings.accountSwitchAuth = false
+                        }
+                        reloadPromise.set(true)
+                    })
+                }
+            case .secretFolderProtects:
+                KalgramChatLockSettings.setSecretFolderProtectsChats(value, accountPeerId: accountPeerId)
             }
             reloadPromise.set(true)
         },
@@ -522,6 +604,57 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     })
                 ])])
                 presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .chatLockTimeout:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for seconds in KalgramChatLockSettings.autolockChoices {
+                    items.append(ActionSheetButtonItem(title: chatLockTimeoutTitle(seconds), color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        KalgramChatLockSettings.autolockSeconds = seconds
+                        reloadPromise.set(true)
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .secretFolder:
+                KalgramLocalAuth.authenticate(reason: "Изменить настройки безопасности", completion: { granted in
+                    guard granted else {
+                        return
+                    }
+                    let _ = (context.engine.peers.updatedChatListFilters()
+                    |> take(1)
+                    |> deliverOnMainQueue).startStandalone(next: { filters in
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetButtonItem(title: "Нет", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            KalgramChatLockSettings.setSecretFolderId(0, accountPeerId: accountPeerId)
+                            KalgramChatLockSettings.setSecretFolderPeers([], accountPeerId: accountPeerId)
+                            reloadPromise.set(true)
+                        }))
+                        for filter in filters {
+                            if case let .filter(folderId, title, _, _) = filter {
+                                items.append(ActionSheetButtonItem(title: title.text.isEmpty ? "#\(folderId)" : title.text, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    KalgramChatLockSettings.setSecretFolderId(folderId, accountPeerId: accountPeerId)
+                                    reloadPromise.set(true)
+                                }))
+                            }
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    })
+                })
             case .sendingDelaySeconds:
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -623,6 +756,23 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     reloadPromise.set(true)
                 }))
                 KalgramImagePicker.topViewController()?.present(alert, animated: true)
+            case .chatLockClear:
+                KalgramLocalAuth.authenticate(reason: "Изменить настройки безопасности", completion: { granted in
+                    if granted {
+                        KalgramChatLockSettings.clearProtectedList(accountPeerId: accountPeerId)
+                        reloadPromise.set(true)
+                    }
+                })
+            case .secretFolderOpen:
+                let folderId = KalgramChatLockSettings.secretFolderId(accountPeerId: accountPeerId)
+                KalgramLocalAuth.authenticate(reason: "Открыть секретную папку", completion: { granted in
+                    guard granted else {
+                        return
+                    }
+                    let _ = KalgramChatLock.shared
+                    KalgramChatLockSettings.unlockSecretFolder(accountPeerId: accountPeerId)
+                    openFolderImpl?(folderId)
+                })
             case .sendingRemoveRules:
                 KalgramOutgoing.rules = []
                 showToast?("Правила убраны")
@@ -683,6 +833,22 @@ public func kalgramProController(context: AccountContext) -> ViewController {
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
+    openFolderImpl = { [weak controller] folderId in
+        guard let navigationController = controller?.navigationController as? NavigationController else {
+            return
+        }
+        navigationController.popToRoot(animated: true)
+        guard let tabBarController = navigationController.viewControllers.first as? TabBarController else {
+            return
+        }
+        for (index, tab) in tabBarController.controllers.enumerated() {
+            if let chatListController = tab as? ChatListController {
+                tabBarController.selectedIndex = index
+                chatListController.navigateToFolder(folderId: folderId, completion: {})
+                break
+            }
+        }
     }
     showToast = { [weak context] text in
         guard let context else {

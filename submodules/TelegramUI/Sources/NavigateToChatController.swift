@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import AccountContext
+import SGSettingsUI
 import GalleryUI
 import InstantPageUI
 import ChatListUI
@@ -22,6 +23,10 @@ import ChatMessageNotificationItem
 import FaceScanScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
+    // kalgram: a protected chat asks first
+    if KalgramChatLock.shared.interceptOpen(context: params.context, peerId: params.chatLocation.peerId, proceed: { navigateToChatControllerImpl(params) }) {
+        return
+    }
     if case let .peer(peer) = params.chatLocation {
         let _ = params.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer).startStandalone()
     }

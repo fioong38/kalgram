@@ -3,6 +3,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import UIKitRuntimeUtils
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -1894,7 +1895,16 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
     
+    private var kalgramHiddenFromCapture = false
+
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        // kalgram: the whole chat list comes out empty on screenshots, when asked for
+        let kalgramHidesFromCapture = KalgramChatLockSettings.screenshotPrivacy && KalgramChatLockSettings.screenshotPrivacyChatList
+        if kalgramHidesFromCapture != self.kalgramHiddenFromCapture {
+            self.kalgramHiddenFromCapture = kalgramHidesFromCapture
+            setLayerDisableScreenshots(self.layer, kalgramHidesFromCapture)
+        }
+
         var navigationBarHeight = navigationBarHeight
         var visualNavigationHeight = visualNavigationHeight
         var cleanNavigationBarHeight = cleanNavigationBarHeight

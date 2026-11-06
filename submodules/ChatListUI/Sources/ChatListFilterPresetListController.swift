@@ -340,7 +340,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
-    let filtersWithCountsSignal = context.engine.peers.updatedChatListFilters()
+    let filtersWithCountsSignal = kalgramVisibleFolders(context.engine.peers.updatedChatListFilters(), context: context)
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
         return .single(filters.map { filter -> (ChatListFilter, Int) in

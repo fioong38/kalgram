@@ -1241,6 +1241,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
+        self.kalgramUpdateChromeCaptureProtection()
+
         let isSecret = self.chatPresentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat || self.chatLocation.peerId?.isVerificationCodes == true
         if self.historyNodeContainer.isSecret != isSecret {
             #if DEBUG
@@ -5643,7 +5645,30 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.historyNode.isHidden = isBlurred
     }
 
+    // kalgram: the chat's header, input and panels come out empty on screenshots and recordings; the
+    // messages stay. Applied from layout only when it changes.
+    private var kalgramChromeHiddenFromCapture = false
+
+    private func kalgramUpdateChromeCaptureProtection() {
+        let hides = KalgramChatLockSettings.screenshotPrivacy
+        if hides == self.kalgramChromeHiddenFromCapture {
+            return
+        }
+        self.kalgramChromeHiddenFromCapture = hides
+        var layers: [CALayer] = [self.inputPanelContainerNode.layer, self.inputContextPanelContainer.layer, self.navigateButtons.layer, self.titleAccessoryPanelContainer.layer]
+        if let navigationBar = self.navigationBar {
+            layers.append(navigationBar.layer)
+        }
+        for layer in layers {
+            setLayerDisableScreenshots(layer, hides)
+        }
+    }
+
     var shouldAnimateMessageTransition: Bool {
+        // kalgram: the send animation would carry the typed text through unprotected layers
+        if self.kalgramChromeHiddenFromCapture {
+            return false
+        }
         if (self.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
             return false
         }

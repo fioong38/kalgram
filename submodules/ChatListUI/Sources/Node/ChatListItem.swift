@@ -463,6 +463,16 @@ private final class ChatListItemTagListComponent: Component {
     }
 }
 
+private func kalgramHidesChatListRow(_ item: ChatListItem) -> Bool {
+    guard case let .peer(peerData) = item.content else {
+        return false
+    }
+    if case let .secretChat(secretChat)? = peerData.peer.peer {
+        KalgramChatLockSettings.noteSecretChat(peerId: secretChat.id, userId: secretChat.regularPeerId)
+    }
+    return KalgramChatLockSettings.hidesContent(accountPeerId: item.context.account.peerId, peerId: peerData.peer.peerId)
+}
+
 public class ChatListItem: ListViewItem {
     public enum EnabledContextActions {
         public struct Actions: OptionSet {
@@ -2640,6 +2650,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     contentData = .chat(itemPeer: itemPeer, threadInfo: threadInfo, peer: peer, hideAuthor: hideAuthor, messageText: messageText, messageEntities: messageEntities, spoilers: spoilers, customEmojiRanges: customEmojiRanges, richTextPreview: richTextPreview)
                     hideAuthor = initialHideAuthor
+                    if kalgramHidesChatListRow(item) {
+                        hideAuthor = true
+                    }
                 case let .group(groupPeers):
                     contentData = .group(peers: groupPeers)
                     hideAuthor = true
@@ -3277,6 +3290,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 break
             }
             let messageTypeIconScale = min(1.0, item.presentationData.fontSize.itemListBaseFontSize / 17.0)
+            // kalgram: a protected chat shows no thumbnails and no type icon
+            if kalgramHidesChatListRow(item) {
+                contentImageSpecs.removeAll()
+                currentMessageTypeIcon = nil
+            }
             
             if let currentMessageTypeIcon {
                 textLeftCutout += currentMessageTypeIcon.size.width * messageTypeIconScale
@@ -3837,6 +3855,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 textMaxWidth -= 18.0
             }
             
+            // kalgram: a protected chat shows no text
+            if kalgramHidesChatListRow(item) {
+                textAttributedString = NSAttributedString(string: "🔒 Чат защищён", font: Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0)), textColor: theme.messageTextColor)
+            }
             let textLineSpacing: CGFloat = min(0.2, item.presentationData.fontSize.itemListBaseFontSize * 0.2 / 17.0)
             // MARK: Swiftgram
             let sgChatListMaxLines: Int

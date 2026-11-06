@@ -1864,8 +1864,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }).start()
     }
     
+    private var kalgramSwitchGranted = false
+
     public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
         if self.activeAccountsValue?.primary?.account.id == id {
+            return
+        }
+        // kalgram: Face ID before switching, when asked for
+        if KalgramChatLockSettings.accountSwitchAuth && !self.kalgramSwitchGranted {
+            KalgramLocalAuth.authenticate(reason: "Переключиться на другой аккаунт", completion: { [weak self, weak settingsController, weak chatListController] granted in
+                guard let self, granted else {
+                    return
+                }
+                self.kalgramSwitchGranted = true
+                self.switchToAccount(id: id, fromSettingsController: settingsController, withChatListController: chatListController)
+                self.kalgramSwitchGranted = false
+            })
             return
         }
         

@@ -2423,6 +2423,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        kalgramRefreshSecretFolderMembers(context: self.context)
                 
         if self.powerSavingMonitoringDisposable == nil {
             self.powerSavingMonitoringDisposable = (self.context.sharedContext.automaticMediaDownloadSettings
@@ -6409,7 +6410,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     override public func tabBarItemContextAction(sourceView: ContextExtractedContentContainingView, gesture: ContextGesture) {
         let _ = (combineLatest(queue: .mainQueue(),
-            self.context.engine.peers.currentChatListFilters(),
+            kalgramVisibleFolders(self.context.engine.peers.currentChatListFilters(), context: self.context) |> take(1),
             chatListFilterItems(context: self.context)
             |> take(1),
             context.engine.data.get(

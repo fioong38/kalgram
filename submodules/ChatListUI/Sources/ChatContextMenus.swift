@@ -106,7 +106,7 @@ func chatContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, promoI
         }
 
         return combineLatest(
-            context.engine.peers.updatedChatListFilters()
+            kalgramVisibleFolders(context.engine.peers.updatedChatListFilters(), context: context)
             |> take(1),
             context.engine.peers.getPinnedItemIds(location: location)
         )
