@@ -382,6 +382,12 @@ func kalgramApplyOutgoing(_ messages: [(Bool, EnqueueMessage)], transaction: Tra
     if hasTextRules && !isBot {
         result = result.map { ($0.0, kalgramTransformedText($0.1)) }
     }
+    if KalgramTweaks.sendWithoutViaBot {
+        result = result.map { ($0.0, kalgramWithoutBotLink($0.1)) }
+    }
+    if KalgramTweaks.anonymousStickers {
+        result = result.map { ($0.0, kalgramAnonymizedSticker($0.1, account: account)) }
+    }
     if !isBot && kalgramCanDelay(result, account: account, peerId: peerId) {
         // One time for the whole batch, so an album stays together
         let now = account.network.globalTime
@@ -406,6 +412,68 @@ func kalgramReadsOnSend(_ messages: [(Bool, EnqueueMessage)], account: Account) 
 
 func kalgramReadOnActionApplies(account: Account) -> Bool {
     return KalgramOutgoing.isReadOnAction(accountPeerId: account.peerId) && KalgramGhost.isActive(.readReceipts, accountPeerId: account.peerId)
+}
+
+// An inline result that can stand on its own becomes a normal message: no "via @bot", no bot keyboard.
+// Sounds, games, invoices and web content keep the inline path, they do not go otherwise.
+private func kalgramWithoutBotLink(_ message: EnqueueMessage) -> EnqueueMessage {
+    guard case let .message(text, attributes, inlineStickers, mediaReference, threadId, replyToMessageId, replyToStoryId, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets) = message else {
+        return message
+    }
+    guard attributes.contains(where: { $0 is OutgoingChatContextResultMessageAttribute }) else {
+        return message
+    }
+    let media = mediaReference?.media
+    if let image = media as? TelegramMediaImage {
+        guard case .cloud? = image.reference else {
+            return message
+        }
+    } else if let file = media as? TelegramMediaFile {
+        if !(file.resource is CloudDocumentMediaResource) || file.isVoice || file.isMusic || file.isInstantVideo {
+            return message
+        }
+    } else if media != nil && !(media is TelegramMediaMap) && !(media is TelegramMediaContact) {
+        return message
+    }
+    if media == nil && text.isEmpty {
+        return message
+    }
+    let updatedAttributes = attributes.filter { attribute in
+        return !(attribute is OutgoingChatContextResultMessageAttribute) && !(attribute is InlineBotMessageAttribute) && !(attribute is ReplyMarkupMessageAttribute)
+    }
+    return .message(text: text, attributes: updatedAttributes, inlineStickers: inlineStickers, mediaReference: media.flatMap { AnyMediaReference.standalone(media: $0) }, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
+}
+
+// The file already on this device goes up again without its pack, so the recipient cannot open the
+// pack. A sticker not downloaded yet goes as it is.
+private func kalgramAnonymizedSticker(_ message: EnqueueMessage, account: Account) -> EnqueueMessage {
+    guard case let .message(text, attributes, inlineStickers, mediaReference, threadId, replyToMessageId, replyToStoryId, localGroupingKey, correlationId, _) = message else {
+        return message
+    }
+    guard let file = mediaReference?.media as? TelegramMediaFile, file.isSticker || file.isAnimatedSticker || file.isVideoSticker else {
+        return message
+    }
+    var hasPack = false
+    var updatedFileAttributes: [TelegramMediaFileAttribute] = []
+    for attribute in file.attributes {
+        if case let .Sticker(displayText, packReference, maskData) = attribute {
+            if packReference != nil {
+                hasPack = true
+            }
+            updatedFileAttributes.append(.Sticker(displayText: displayText, packReference: nil, maskData: maskData))
+        } else {
+            updatedFileAttributes.append(attribute)
+        }
+    }
+    guard hasPack, let path = account.postbox.mediaBox.completedResourcePath(file.resource) else {
+        return message
+    }
+    let updatedAttributes = attributes.filter { attribute in
+        return !(attribute is EmojiSearchQueryMessageAttribute) && !(attribute is OutgoingChatContextResultMessageAttribute) && !(attribute is InlineBotMessageAttribute) && !(attribute is ReplyMarkupMessageAttribute)
+    }
+    let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: Int64.random(in: Int64.min ... Int64.max), isUniquelyReferencedTemporaryFile: false, size: file.size)
+    let anonymousFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: file.previewRepresentations, videoThumbnails: [], immediateThumbnailData: file.immediateThumbnailData, mimeType: file.mimeType, size: file.size, attributes: updatedFileAttributes, alternativeRepresentations: [])
+    return .message(text: text, attributes: updatedAttributes, inlineStickers: inlineStickers, mediaReference: .standalone(media: anonymousFile), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
 }
 
 private func kalgramCanDelay(_ messages: [(Bool, EnqueueMessage)], account: Account, peerId: PeerId) -> Bool {

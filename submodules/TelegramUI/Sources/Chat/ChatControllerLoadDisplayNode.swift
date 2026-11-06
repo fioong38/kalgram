@@ -1611,7 +1611,7 @@ extension ChatControllerImpl {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({
                                 $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(
                                     messageId: message.id,
-                                    quote: nil,
+                                    quote: kalgramDefaultReplyQuote(message: EngineMessage(message), context: strongSelf.context, chatLocation: strongSelf.chatLocation),
                                     innerSubject: innerSubject
                                 ))
                             }).updatedReplyMessage(message).updatedSearch(nil).updatedShowCommands(false) }, completion: { t in
@@ -5686,4 +5686,40 @@ extension ChatControllerImpl {
             historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
         }
     }
+}
+// kalgram: a reply starts by quoting the message, as far as the server allows. Only what a quote can
+// carry is kept: a link or code entity would make the send fail with an outdated quote.
+private func kalgramDefaultReplyQuote(message: EngineMessage, context: AccountContext, chatLocation: ChatLocation) -> EngineMessageReplyQuote? {
+    if !KalgramTweaks.autoQuoteReply {
+        return nil
+    }
+    if KalgramTweaks.autoQuoteSkipComments, case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.isChannelPost {
+        return nil
+    }
+    let text = message.text
+    if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || message.attributes.contains(where: { $0 is RichTextMessageAttribute }) {
+        return nil
+    }
+    var maximumLength = 1024
+    if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["quote_length_max"] as? Double {
+        maximumLength = max(1, Int(value))
+    }
+    let string = text as NSString
+    var quoteLength = string.length
+    if quoteLength > maximumLength {
+        // Never cut a surrogate pair
+        quoteLength = string.rangeOfComposedCharacterSequence(at: maximumLength - 1).location
+    }
+    if quoteLength <= 0 {
+        return nil
+    }
+    var messageEntities: [MessageTextEntity] = []
+    for attribute in message.attributes {
+        if let attribute = attribute as? TextEntitiesMessageAttribute {
+            messageEntities = attribute.entities
+            break
+        }
+    }
+    let entities = messageTextEntitiesInRange(entities: messageEntities, range: NSRange(location: 0, length: quoteLength), onlyQuoteable: true)
+    return EngineMessageReplyQuote(text: string.substring(to: quoteLength), offset: nil, entities: entities, media: nil)
 }

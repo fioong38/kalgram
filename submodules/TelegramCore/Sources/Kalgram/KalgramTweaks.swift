@@ -507,6 +507,54 @@ public enum KalgramTweaks {
         }
     }
 
+    // A sticker goes as a new upload without the link to its pack.
+    public static let anonymousStickersKey = "kalgram.anonymousStickers"
+
+    public static var anonymousStickers: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: anonymousStickersKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: anonymousStickersKey)
+        }
+    }
+
+    // Inline bot results go as normal messages where possible.
+    public static let sendWithoutViaBotKey = "kalgram.sendWithoutViaBot"
+
+    public static var sendWithoutViaBot: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: sendWithoutViaBotKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: sendWithoutViaBotKey)
+        }
+    }
+
+    // A reply starts by quoting the message's text.
+    public static let autoQuoteReplyKey = "kalgram.autoQuoteReply"
+
+    public static var autoQuoteReply: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: autoQuoteReplyKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoQuoteReplyKey)
+        }
+    }
+
+    // But not in the comments of a channel.
+    public static let autoQuoteSkipCommentsKey = "kalgram.autoQuoteSkipComments"
+
+    public static var autoQuoteSkipComments: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: autoQuoteSkipCommentsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoQuoteSkipCommentsKey)
+        }
+    }
+
     public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
 
     public static var keepSelfDestructing: Bool {

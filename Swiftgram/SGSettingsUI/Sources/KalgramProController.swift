@@ -103,6 +103,10 @@ private enum KalgramProToggle: String {
     case hidePinnedPanel
     case hideProfileAbout
     case characterCounter
+    case anonymousStickers
+    case sendWithoutViaBot
+    case autoQuoteReply
+    case autoQuoteSkipComments
 }
 
 private enum KalgramProSlider: String {
@@ -338,6 +342,10 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     let sendingRules = KalgramOutgoing.rules
     entries.append(.header(id: id.count, section: .sending, text: "ОТПРАВКА", badge: nil))
     entries.append(.toggle(id: id.count, section: .sending, settingName: .sendingAntiCaps, value: KalgramOutgoing.antiCaps, text: "Анти-капс", enabled: true))
+    entries.append(.toggle(id: id.count, section: .sending, settingName: .autoQuoteReply, value: KalgramTweaks.autoQuoteReply, text: "Отвечать цитатой", enabled: true))
+    entries.append(.toggle(id: id.count, section: .sending, settingName: .autoQuoteSkipComments, value: KalgramTweaks.autoQuoteSkipComments, text: "Кроме комментариев", enabled: KalgramTweaks.autoQuoteReply))
+    entries.append(.toggle(id: id.count, section: .sending, settingName: .anonymousStickers, value: KalgramTweaks.anonymousStickers, text: "Анонимные стикеры", enabled: true))
+    entries.append(.toggle(id: id.count, section: .sending, settingName: .sendWithoutViaBot, value: KalgramTweaks.sendWithoutViaBot, text: "Без «с помощью» у ботов", enabled: true))
     entries.append(.toggle(id: id.count, section: .sending, settingName: .sendingWordReplacement, value: KalgramOutgoing.wordReplacement, text: "Автозамена слов", enabled: true))
     entries.append(.disclosure(id: id.count, section: .sending, link: .sendingAddRule, text: "Добавить правило замены"))
     if !sendingRules.isEmpty {
@@ -659,6 +667,14 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramTweaks.hideProfileAbout = value
             case .characterCounter:
                 KalgramTweaks.characterCounter = value
+            case .anonymousStickers:
+                KalgramTweaks.anonymousStickers = value
+            case .sendWithoutViaBot:
+                KalgramTweaks.sendWithoutViaBot = value
+            case .autoQuoteReply:
+                KalgramTweaks.autoQuoteReply = value
+            case .autoQuoteSkipComments:
+                KalgramTweaks.autoQuoteSkipComments = value
             case .chatLockAllChats:
                 kalgramChangeSecurity(weakens: !value, reload: { reloadPromise.set(true) }, apply: {
                     KalgramChatLockSettings.allChats = value
