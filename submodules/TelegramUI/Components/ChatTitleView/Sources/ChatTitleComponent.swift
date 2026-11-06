@@ -228,8 +228,16 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         }
     }
     
+    // kalgram: nothing is drawn and no space is taken
+    public var kalgramHidesContent: Bool = false
+
     public func updateLayout(availableSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let transition = ComponentTransition(transition)
+
+        self.title.view?.isHidden = self.kalgramHidesContent
+        if self.kalgramHidesContent {
+            return CGSize()
+        }
         
         if let contentData = self.contentData {
             let displayBackground: Bool = true

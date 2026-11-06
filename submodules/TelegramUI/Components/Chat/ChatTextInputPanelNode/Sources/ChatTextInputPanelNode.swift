@@ -4347,10 +4347,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
         }
             
+        // kalgram: the number of characters, unless the limit warning is already showing there
+        let kalgramCount = KalgramTweaks.characterCounter ? (self.richTextInputNode?.text.count ?? 0) : 0
+        if kalgramCount > 0, self.counterTextNode.attributedText?.string.isEmpty ?? true, let theme = self.presentationInterfaceState?.theme {
+            self.counterTextNode.attributedText = NSAttributedString(string: "\(kalgramCount)", font: counterFont, textColor: theme.chat.inputPanel.panelControlColor)
+        }
+
         let counterSize = self.counterTextNode.updateLayout(CGSize(width: 40.0, height: 40.0))
         let counterFrame = CGRect(origin: CGPoint(x: backgroundSize.width - 11.0 - counterSize.width, y: 4.0), size: CGSize(width: counterSize.width, height: counterSize.height))
         transition.updateFrame(node: self.counterTextNode, frame: counterFrame)
-        transition.updateAlpha(node: self.counterTextNode, alpha: backgroundSize.height > 50.0 ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.counterTextNode, alpha: (backgroundSize.height > 50.0 || kalgramCount > 0) ? 1.0 : 0.0)
     }
     
     private func installEmojiSuggestionPreviewGesture(hostView: UIView) {

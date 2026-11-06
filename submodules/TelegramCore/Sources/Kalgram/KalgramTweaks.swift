@@ -435,6 +435,78 @@ public enum KalgramTweaks {
         }
     }
 
+    // No back button in chats, the edge swipe still goes back.
+    public static let hideChatBackButtonKey = "kalgram.hideChatBackButton"
+
+    public static var hideChatBackButton: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideChatBackButtonKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideChatBackButtonKey)
+        }
+    }
+
+    // No name and status in the chat header.
+    public static let hideChatTitlePanelKey = "kalgram.hideChatTitlePanel"
+
+    public static var hideChatTitlePanel: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideChatTitlePanelKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideChatTitlePanelKey)
+        }
+    }
+
+    // No avatar in the chat header.
+    public static let hideChatAvatarKey = "kalgram.hideChatAvatar"
+
+    public static var hideChatAvatar: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideChatAvatarKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideChatAvatarKey)
+        }
+    }
+
+    // No pinned message panel in chats.
+    public static let hidePinnedPanelKey = "kalgram.hidePinnedPanel"
+
+    public static var hidePinnedPanel: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hidePinnedPanelKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hidePinnedPanelKey)
+        }
+    }
+
+    // No description in profiles.
+    public static let hideProfileAboutKey = "kalgram.hideProfileAbout"
+
+    public static var hideProfileAbout: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hideProfileAboutKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hideProfileAboutKey)
+        }
+    }
+
+    // The number of characters in the input field.
+    public static let characterCounterKey = "kalgram.characterCounter"
+
+    public static var characterCounter: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: characterCounterKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: characterCounterKey)
+        }
+    }
+
     public static let keepSelfDestructingKey = "kalgram.keepSelfDestructing"
 
     public static var keepSelfDestructing: Bool {

@@ -86,6 +86,8 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
             switch context {
                 case .pinnedMessage:
                     if case .pinnedMessages = chatPresentationInterfaceState.subject {
+                    } else if KalgramTweaks.hidePinnedPanel {
+                        // kalgram: no pinned message panel, other panels still show
                     } else {
                         if chatPinnedPanelIsVisible(pinnedMessageTopId: chatPresentationInterfaceState.pinnedMessage?.topMessageId, skeletonId: chatPresentationInterfaceState.pinnedMessageSkeletonId, closedPinnedMessageId: chatPresentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId, pendingUnpinnedAllMessages: chatPresentationInterfaceState.pendingUnpinnedAllMessages) {
                             selectedContext = context

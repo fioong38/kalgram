@@ -304,7 +304,7 @@ func infoItems(
                     })
                 }
                 
-                if hasAbout || hasWebApp {
+                if (hasAbout && !(KalgramTweaks.hideProfileAbout && user.botInfo == nil)) || hasWebApp {
                     var label: String = ""
                     if let about = cachedData.about, !about.isEmpty {
                         label = user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo
@@ -686,7 +686,7 @@ func infoItems(
                     aboutText = nil
                 }
                 
-                if let aboutText = aboutText {
+                if let aboutText = aboutText, !KalgramTweaks.hideProfileAbout {
                     var enabledEntities = enabledPublicBioEntities
                     if case .group = channel.info {
                         enabledEntities = enabledPrivateBioEntities
@@ -848,7 +848,7 @@ func infoItems(
                 aboutText = nil
             }
             
-            if let aboutText = aboutText {
+            if let aboutText = aboutText, !KalgramTweaks.hideProfileAbout {
                 items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
                     bioContextAction(node, nil, nil)
                 } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: { animated in

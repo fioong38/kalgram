@@ -511,6 +511,12 @@ func updateChatPresentationInterfaceStateImpl(
         if case .messageOptions = selfController.subject {
             titleTransition = titleTransition.withAnimation(.none)
         }
+        // kalgram: no name and status in the chat header
+        let kalgramHidesTitle = KalgramTweaks.hideChatTitlePanel && selfController.presentationInterfaceState.mode == .standard(.default)
+        if chatTitleView.kalgramHidesContent != kalgramHidesTitle {
+            chatTitleView.kalgramHidesContent = kalgramHidesTitle
+            chatTitleView.requestUpdate?(.immediate)
+        }
         let isChatTitleViewUpdated = chatTitleView.update(
             context: selfController.context,
             theme: selfController.presentationData.theme,

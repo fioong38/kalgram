@@ -95,6 +95,41 @@ public enum KalgramOutgoing {
         UserDefaults.standard.set(value, forKey: readOnActionKey(accountPeerId))
     }
 
+    // The whole text of a sent message in one style, "" for none
+    private static let autoFormatKey = "kalgram.outgoing.autoFormat"
+
+    public static var autoFormat: String {
+        get {
+            return UserDefaults.standard.string(forKey: autoFormatKey) ?? ""
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoFormatKey)
+        }
+    }
+
+    static var autoFormatType: MessageTextEntityType? {
+        switch autoFormat {
+        case "bold":
+            return .Bold
+        case "italic":
+            return .Italic
+        case "monospace":
+            return .Code
+        case "strikethrough":
+            return .Strikethrough
+        case "underline":
+            return .Underline
+        case "spoiler":
+            return .Spoiler
+        case "quote":
+            return .BlockQuote(isCollapsed: false)
+        case "code":
+            return .Pre(language: nil)
+        default:
+            return nil
+        }
+    }
+
     // A new rule for a word already in the list takes its place
     public static func addRule(source: String, replacement: String) {
         let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -317,13 +352,23 @@ private func kalgramTransformedText(_ message: EnqueueMessage) -> EnqueueMessage
         let protected = KalgramTextStages.protectedRanges(text: updatedText, entities: updatedEntities)
         (updatedText, updatedEntities) = KalgramTextStages.apply(KalgramTextStages.antiCapsEdits(text: updatedText, protected: protected), text: updatedText, entities: updatedEntities)
     }
-    if updatedText == text {
+    var addedFormat = false
+    if let type = KalgramOutgoing.autoFormatType, !updatedText.hasPrefix("/") {
+        let range = 0 ..< (updatedText as NSString).length
+        if !updatedEntities.contains(where: { $0.range == range && $0.type == type }) {
+            updatedEntities.append(MessageTextEntity(range: range, type: type))
+            addedFormat = true
+        }
+    }
+    if updatedText == text && !addedFormat {
         return message
     }
 
     var updatedAttributes = attributes
     if let entitiesIndex {
         updatedAttributes[entitiesIndex] = TextEntitiesMessageAttribute(entities: updatedEntities)
+    } else if !updatedEntities.isEmpty {
+        updatedAttributes.append(TextEntitiesMessageAttribute(entities: updatedEntities))
     }
     return .message(text: updatedText, attributes: updatedAttributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
 }
@@ -331,7 +376,7 @@ private func kalgramTransformedText(_ message: EnqueueMessage) -> EnqueueMessage
 // Runs inside the send's transaction, so the chat's peer is known
 func kalgramApplyOutgoing(_ messages: [(Bool, EnqueueMessage)], transaction: Transaction, account: Account, peerId: PeerId) -> [(Bool, EnqueueMessage)] {
     var result = messages
-    let hasTextRules = KalgramOutgoing.antiCaps || KalgramOutgoing.wordReplacement
+    let hasTextRules = KalgramOutgoing.antiCaps || KalgramOutgoing.wordReplacement || !KalgramOutgoing.autoFormat.isEmpty
     // Bots get exactly what was typed: commands, button texts, codes
     let isBot = (transaction.getPeer(peerId) as? TelegramUser)?.botInfo != nil
     if hasTextRules && !isBot {

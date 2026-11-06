@@ -73,6 +73,15 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
         }
     }
     
+    // kalgram: an empty button takes the back button's place: it has no width, so no pill is drawn and
+    // there is nothing to tap, while the edge swipe still goes back
+    if KalgramTweaks.hideChatBackButton, case .standard(.default) = presentationInterfaceState.mode {
+        if let currentButton, currentButton.action == .dismiss {
+            return currentButton
+        }
+        return ChatNavigationButton(action: .dismiss, buttonItem: UIBarButtonItem(title: "", style: .plain, target: nil, action: nil))
+    }
+
     return nil
 }
 
@@ -238,11 +247,11 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
     }
     
     if case .scheduledMessages = presentationInterfaceState.subject {
-        return chatInfoNavigationButton
+        return KalgramTweaks.hideChatAvatar ? nil : chatInfoNavigationButton
     }
     
     if case .standard(.previewing) = presentationInterfaceState.mode {
-        return chatInfoNavigationButton
+        return KalgramTweaks.hideChatAvatar ? nil : chatInfoNavigationButton
     } else if let peerId = presentationInterfaceState.chatLocation.peerId {
         if presentationInterfaceState.accountPeerId == peerId {
             var displaySearchButton = false
@@ -252,7 +261,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
             }
             
             if case .scheduledMessages = presentationInterfaceState.subject {
-                return chatInfoNavigationButton
+                return KalgramTweaks.hideChatAvatar ? nil : chatInfoNavigationButton
             } else {
                 displaySearchButton = true
             }
@@ -271,7 +280,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         }
     }
 
-    return chatInfoNavigationButton
+    return KalgramTweaks.hideChatAvatar ? nil : chatInfoNavigationButton
 }
 
 func secondaryRightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {

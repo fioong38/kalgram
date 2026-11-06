@@ -97,6 +97,12 @@ private enum KalgramProToggle: String {
     case hideProxySponsor
     case searchById
     case checkColorsInChatList
+    case hideChatBackButton
+    case hideChatTitlePanel
+    case hideChatAvatar
+    case hidePinnedPanel
+    case hideProfileAbout
+    case characterCounter
 }
 
 private enum KalgramProSlider: String {
@@ -121,6 +127,8 @@ private enum KalgramProSelector: String {
     case appFont
     case readCheckColor
     case sentCheckColor
+    case bubbleAlpha
+    case autoFormat
 }
 
 private enum KalgramProLink: String {
@@ -234,6 +242,20 @@ private let kalgramCheckColorChoices: [(rgb: Int, title: String)] = [
     (0xaf52de, "Фиолетовый"),
     (0x8e8e93, "Серый"),
     (0xffffff, "Белый")
+]
+
+private let kalgramBubbleAlphaChoices: [Int] = [100, 90, 80, 70, 60, 50]
+
+private let kalgramAutoFormatChoices: [(value: String, title: String)] = [
+    ("", "Выключен"),
+    ("bold", "Жирный"),
+    ("italic", "Курсив"),
+    ("monospace", "Моноширинный"),
+    ("underline", "Подчёркнутый"),
+    ("strikethrough", "Зачёркнутый"),
+    ("spoiler", "Скрытый"),
+    ("quote", "Цитата"),
+    ("code", "Блок кода")
 ]
 
 private func kalgramCheckColorTitle(_ rgb: Int) -> String {
@@ -435,6 +457,17 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.toggle(id: id.count, section: .interface, settingName: .hideProxySponsor, value: KalgramTweaks.hideProxySponsor, text: "Скрыть канал спонсора прокси", enabled: true))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .searchById, value: KalgramTweaks.searchById, text: "Поиск по ID", enabled: true))
     entries.append(.notice(id: id.count, section: .interface, text: "Шрифт и аватары применяются после перезапуска. Шрифт iOS без кириллицы рисует русские буквы системным. Поиск по ID находит только тех, кого это устройство уже знает."))
+    entries.append(.header(id: id.count, section: .interface, text: "ШАПКА ЧАТА И ПРОФИЛЬ", badge: nil))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideChatBackButton, value: KalgramTweaks.hideChatBackButton, text: "Без кнопки «Назад»", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideChatTitlePanel, value: KalgramTweaks.hideChatTitlePanel, text: "Без имени и статуса", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideChatAvatar, value: KalgramTweaks.hideChatAvatar, text: "Без аватарки", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hidePinnedPanel, value: KalgramTweaks.hidePinnedPanel, text: "Без закреплённых сообщений", enabled: true))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .hideProfileAbout, value: KalgramTweaks.hideProfileAbout, text: "Без описания в профиле", enabled: true))
+    entries.append(.notice(id: id.count, section: .interface, text: "Меняется в чатах, открытых после настройки. Назад остаётся свайпом от края. Если скрыть и имя, и аватарку, профиль собеседника из чата не открыть."))
+    entries.append(.header(id: id.count, section: .interface, text: "ПОЛЕ ВВОДА", badge: nil))
+    entries.append(.toggle(id: id.count, section: .interface, settingName: .characterCounter, value: KalgramTweaks.characterCounter, text: "Счётчик символов", enabled: true))
+    entries.append(.oneFromManySelector(id: id.count, section: .interface, settingName: .autoFormat, text: "Автоформат при отправке", value: kalgramAutoFormatChoices.first(where: { $0.value == KalgramOutgoing.autoFormat })?.title ?? "Выключен", enabled: true))
+    entries.append(.notice(id: id.count, section: .interface, text: "Автоформат: весь текст сообщения уходит выбранным стилем. Команды ботам не меняются."))
     entries.append(.header(id: id.count, section: .interface, text: "СООБЩЕНИЯ", badge: nil))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .hideEditedMark, value: KalgramTweaks.hideEditedMark, text: "Без пометки «изменено»", enabled: true))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .hideMessageTime, value: KalgramTweaks.hideMessageTime, text: "Без времени", enabled: true))
@@ -445,6 +478,7 @@ private func kalgramProEntries(accountPeerId: EnginePeer.Id, accountName: String
     entries.append(.oneFromManySelector(id: id.count, section: .interface, settingName: .readCheckColor, text: "Цвет «прочитано»", value: kalgramCheckColorTitle(KalgramTweaks.readCheckColor), enabled: true))
     entries.append(.oneFromManySelector(id: id.count, section: .interface, settingName: .sentCheckColor, text: "Цвет «доставлено»", value: kalgramCheckColorTitle(KalgramTweaks.sentCheckColor), enabled: true))
     entries.append(.toggle(id: id.count, section: .interface, settingName: .checkColorsInChatList, value: KalgramTweaks.checkColorsInChatList, text: "Цвета галочек и в списке чатов", enabled: true))
+    entries.append(.oneFromManySelector(id: id.count, section: .interface, settingName: .bubbleAlpha, text: "Непрозрачность пузырей", value: "\(UserDefaults.standard.object(forKey: "kalgram.bubbleAlpha") as? Int ?? 100) %", enabled: true))
     entries.append(.notice(id: id.count, section: .interface, text: "Без форматирования: жирный, курсив, код и цитаты показываются обычным текстом, ссылки и эмодзи остаются. Меняется в сообщениях, которые отрисуются после настройки."))
     entries.append(.notice(id: id.count, section: .interface, text: "AMOLED делает чёрной любую тёмную тему и на этом экране экономит заряд. Без размытия и без анимированных статусов тоже меньше работы видеочипу. AMOLED и разделители применяются после перезапуска."))
     entries.append(.notice(id: id.count, section: .interface, text: "Как до «жидкого стекла»: плоские панели без бликов и теней, панель вкладок во всю ширину внизу экрана с подписями. Нужен перезапуск."))
@@ -613,6 +647,18 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                 KalgramTweaks.searchById = value
             case .checkColorsInChatList:
                 KalgramTweaks.checkColorsInChatList = value
+            case .hideChatBackButton:
+                KalgramTweaks.hideChatBackButton = value
+            case .hideChatTitlePanel:
+                KalgramTweaks.hideChatTitlePanel = value
+            case .hideChatAvatar:
+                KalgramTweaks.hideChatAvatar = value
+            case .hidePinnedPanel:
+                KalgramTweaks.hidePinnedPanel = value
+            case .hideProfileAbout:
+                KalgramTweaks.hideProfileAbout = value
+            case .characterCounter:
+                KalgramTweaks.characterCounter = value
             case .chatLockAllChats:
                 kalgramChangeSecurity(weakens: !value, reload: { reloadPromise.set(true) }, apply: {
                     KalgramChatLockSettings.allChats = value
@@ -716,6 +762,41 @@ public func kalgramProController(context: AccountContext) -> ViewController {
                     items.append(ActionSheetButtonItem(title: "\(minutes) мин", color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         KalgramStudySettings.minutes = minutes
+                        reloadPromise.set(true)
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .bubbleAlpha:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for value in kalgramBubbleAlphaChoices {
+                    items.append(ActionSheetButtonItem(title: "\(value) %", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        UserDefaults.standard.set(value, forKey: "kalgram.bubbleAlpha")
+                        reloadPromise.set(true)
+                        askForRestart?()
+                    }))
+                }
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case .autoFormat:
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+                for choice in kalgramAutoFormatChoices {
+                    items.append(ActionSheetButtonItem(title: choice.title, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        KalgramOutgoing.autoFormat = choice.value
                         reloadPromise.set(true)
                     }))
                 }

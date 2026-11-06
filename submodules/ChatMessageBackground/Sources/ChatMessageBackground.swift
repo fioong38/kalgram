@@ -5,6 +5,12 @@ import Display
 import TelegramPresentationData
 import WallpaperBackgroundNode
 
+// kalgram: bubble opacity, percent. Read once at launch: this runs for every message on screen.
+private let kalgramBubbleAlpha: CGFloat = {
+    let value = UserDefaults.standard.integer(forKey: "kalgram.bubbleAlpha")
+    return value > 0 ? CGFloat(value) / 100.0 : 1.0
+}()
+
 public enum ChatMessageBackgroundMergeType: Equatable {
     case None, Side, Top(side: Bool), Bottom, Both, Extracted
     
@@ -238,6 +244,7 @@ public class ChatMessageBackground: ASDisplayNode {
         self.graphics = graphics
         self.backgroundNode = backgroundNode
         self.hasWallpaper = hasWallpaper
+        self.imageView?.alpha = kalgramBubbleAlpha
         
         var image: UIImage?
         
@@ -682,6 +689,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
             if let maskView = self.maskView {
                 maskView.image = self.overrideMask ? nil : bubbleMaskForType(type, graphics: essentialGraphics)
             }
+            self.backgroundContent?.alpha = kalgramBubbleAlpha
 
             // A mask created or re-imaged just now has no bands yet.
             self.updateTearBands(animation: .None)
